@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grupo Galpão Analytics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* Identidade visual do site Grupo Galpão: navy profundo, azul céu, dourado de destaque, pílulas com contorno */
+:root {
+    --navy: #00131D; --navy-2: #001A29; --navy-3: #022435; --aqua: #003F61; --aqua-light: #0D6DA0;
+    --megaman: #45BDFE; --megaman-light: #89D5FE;
+    --gold: #E6C364; --gold-dark: #E6C364; --gold-mid: #EEB311;
+    --desert: #FFFAF3; --text: #FFFAF3; --muted: #9DB4C4;
+    --line: rgba(137, 213, 254, .16);
+    --white: #FFFFFF; --gray: rgba(255,255,255,.25); --gray-light: rgba(255,255,255,.08);
+    --success: #5CE560; --success-dark: #5CE560; --danger: #FF6B6B;
+    --graphite-light: #9DB4C4;
+    --shadow: 0 10px 30px -12px rgba(0,0,0,.6);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { background: var(--navy); }
+body { font-family: 'Manrope', sans-serif; background: var(--navy); color: var(--text); line-height: 1.5; -webkit-font-smoothing: antialiased; }
+h1, h2, h3, h4 { font-family: 'Ubuntu', sans-serif; font-weight: 700; color: var(--desert); line-height: 1.15; letter-spacing: -.2px; }
+
+/* Header: barra translúcida arredondada, como no topo do site */
+.header { position: sticky; top: 0; z-index: 100; padding: 14px 2rem; background: linear-gradient(var(--navy), rgba(0,19,29,.85)); backdrop-filter: blur(8px); }
+.header-content { max-width: 1400px; margin: 0 auto; padding: 0 1.25rem; height: 68px; display: flex; align-items: center; justify-content: space-between; gap: 1rem; background: rgba(255,255,255,.06); border: 1px solid var(--gray); border-radius: 14px; }
+.logo { display: flex; align-items: center; gap: .75rem; }
+.logo img { height: 38px; }
+.logo-fallback { width: 40px; height: 40px; border-radius: 10px; border: 2px solid var(--gold); display: none; align-items: center; justify-content: center; font: 700 20px 'Ubuntu'; color: var(--gold); }
+.logo-text h1 { font-size: 19px; line-height: 1; text-transform: uppercase; }
+.logo-text p { font-size: 11px; color: var(--megaman); font-weight: 600; letter-spacing: .6px; text-transform: uppercase; margin-top: 3px; }
+.file-pill { font-size: 13px; color: var(--muted); border: 1px solid var(--gray); border-radius: 999px; padding: .35rem .9rem; }
+.file-pill:empty { display: none; }
+
+/* Botões em pílula */
+.btn { display: inline-flex; align-items: center; gap: .5rem; padding: .6rem 1.4rem; border-radius: 999px; font: 500 14px 'Manrope'; border: 1px solid var(--desert); cursor: pointer; transition: all .2s; background: rgba(255,255,255,.04); color: var(--desert); }
+.btn:hover { background: var(--desert); color: var(--navy); }
+.btn-primary { background: var(--megaman); border-color: var(--megaman); color: var(--navy); }
+.btn-outline { background: transparent; }
+.btn-sm { padding: .4rem 1rem; font-size: 13px; }
+
+/* Layout */
+.main { max-width: 1400px; margin: 0 auto; padding: 1.5rem 2rem 4rem; }
+.nav-tabs { display: flex; gap: .5rem; margin-bottom: 2rem; flex-wrap: wrap; }
+.nav-tab { padding: .55rem 1.3rem; border-radius: 999px; font: 500 14px 'Manrope'; color: var(--desert); cursor: pointer; border: 1px solid var(--gray); background: rgba(255,255,255,.03); white-space: nowrap; transition: all .2s; }
+.nav-tab:hover:not(:disabled) { border-color: var(--megaman); color: var(--megaman); }
+.nav-tab.active { background: var(--megaman); border-color: var(--megaman); color: var(--navy); font-weight: 700; }
+.nav-tab:disabled { opacity: .35; cursor: not-allowed; }
+.tab-content { display: none; }
+.tab-content.active { display: block; animation: fade .25s ease; }
+@keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; }
+.mb-2 { margin-bottom: 1rem; } .mb-4 { margin-bottom: 2rem; }
+.muted { color: var(--muted); }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+section > h3 { font-size: 22px; }
+
+/* Cards: painéis navy com contorno sutil */
+.card { background: var(--navy-2); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); overflow: hidden; }
+.card-header { padding: 1.25rem 1.5rem 1rem; border-bottom: 1px solid var(--line); }
+.card-title { font: 700 18px 'Ubuntu'; color: var(--desert); }
+.card-content { padding: 1.5rem; }
+
+/* Upload: hero com gradiente e faixa azul-céu curva, como as seções do site */
+.hero { position: relative; overflow: hidden; padding: 3rem 2.5rem; border-radius: 18px; margin-bottom: 0; text-align: left; background:
+    radial-gradient(120% 140% at 100% 0%, rgba(69,189,254,.35) 0%, transparent 55%),
+    linear-gradient(135deg, #00131D 0%, #003F61 60%, #0D6DA0 100%); border: 1px solid var(--line); }
+.hero h2 { font-size: clamp(28px, 4vw, 44px); max-width: 720px; margin-bottom: 1rem; }
+.hero p { color: var(--desert); opacity: .9; max-width: 620px; font-size: 17px; }
+#upload .card { background: var(--megaman); border: none; border-radius: 0 0 48px 48px; margin: -12px 0 0; padding-top: 12px; color: var(--navy); }
+#upload .card-content { padding: 2rem; }
+.dropzone { border: 2px dashed rgba(0,19,29,.45); border-radius: 16px; padding: 3rem 2rem; text-align: center; cursor: pointer; transition: all .2s; background: rgba(255,255,255,.18); }
+.dropzone:hover, .dropzone.drag { background: rgba(255,255,255,.35); border-color: var(--navy); }
+.dropzone-icon { font-size: 44px; margin-bottom: .5rem; }
+.dropzone h3 { color: var(--navy); font-size: 24px; margin-bottom: .4rem; }
+.dropzone .muted { color: var(--navy); opacity: .8; }
+.options { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-top: 1.25rem; font-size: 14px; color: var(--navy); font-weight: 600; }
+.options label { display: flex; align-items: center; gap: .5rem; cursor: pointer; }
+.options input { accent-color: var(--navy); width: 16px; height: 16px; }
+.options select { padding: .4rem 1rem; border-radius: 999px; border: 1px solid var(--navy); font: 600 14px 'Manrope'; background: transparent; color: var(--navy); }
+.alert { padding: .9rem 1.25rem; border-radius: 12px; margin-top: 1rem; font-size: 14px; }
+.alert-danger { background: rgba(212,41,41,.15); border: 1px solid #D42929; color: #7a0b0b; }
+.alert-info { background: var(--navy); color: var(--desert); }
+.alert-warning { background: rgba(0,19,29,.12); border: 1px solid var(--navy); color: var(--navy); }
+
+/* Stats: números grandes em Ubuntu, como "+R$2mi" */
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+.stat-card { background: var(--navy-2); border: 1px solid var(--line); border-radius: 16px; padding: 1.25rem 1.4rem; position: relative; overflow: hidden; }
+.stat-card::before { content: ''; position: absolute; left: 0; top: 1.25rem; bottom: 1.25rem; width: 3px; border-radius: 0 3px 3px 0; background: var(--megaman); }
+.stat-card.good::before { background: var(--success); }
+.stat-card.average::before { background: var(--gold); }
+.stat-card.poor::before { background: var(--danger); }
+.stat-label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; margin-bottom: .45rem; }
+.stat-value { font: 700 30px 'Ubuntu'; color: var(--desert); font-variant-numeric: tabular-nums; }
+.stat-sub { font-size: 12px; color: var(--muted); margin-top: .35rem; }
+.c-good { color: var(--success) !important; } .c-average { color: var(--gold) !important; } .c-poor { color: var(--danger) !important; }
+
+/* Tabelas */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { font: 500 11px 'Ubuntu'; text-transform: uppercase; letter-spacing: .6px; color: var(--megaman); padding: .85rem; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; cursor: pointer; user-select: none; }
+th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
+th:hover { color: var(--desert); }
+td { padding: .85rem; border-bottom: 1px solid var(--line); color: var(--desert); }
+tbody tr { cursor: pointer; transition: background .15s; }
+tbody tr:hover { background: rgba(69,189,254,.08); }
+.name-cell { max-width: 360px; font-weight: 600; }
+.filters { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; }
+.filters input, .filters select { padding: .5rem 1rem; border: 1px solid var(--gray); border-radius: 999px; font: 500 14px 'Manrope'; background: transparent; color: var(--desert); }
+.filters select option { background: var(--navy-2); }
+.filters input::placeholder { color: var(--muted); }
+.filters input:focus, .filters select:focus { outline: none; border-color: var(--megaman); }
+.filters input { min-width: 240px; }
+
+/* Badges: etiquetas com contorno, como "Meta Ads | Google Ads | Estratégia" */
+.badge { display: inline-block; padding: .1rem .55rem; border-radius: 4px; font-size: 11px; font-weight: 600; white-space: nowrap; border: 1px solid currentColor; }
+.b-ecommerce { color: var(--megaman); }
+.b-mensagens { color: var(--success); }
+.b-trafego { color: var(--gold); }
+.b-alcance, .b-outro, .b-inactive { color: var(--muted); }
+.b-active { color: var(--success); }
+.b-high { color: var(--danger); }
+.b-medium { color: var(--gold); }
+
+/* Funil: linha numerada, como o RoadMap Performance+ */
+.funnel { display: flex; flex-direction: column; gap: .75rem; counter-reset: stage; }
+.funnel-stage { position: relative; border-radius: 12px; padding: 1rem 1.25rem 1rem 3.75rem; border: 1px solid var(--line); background: var(--navy-3); counter-increment: stage; }
+.funnel-stage::before { content: counter(stage); position: absolute; left: 1rem; top: 1rem; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font: 700 14px 'Ubuntu'; background: var(--navy); color: var(--gold); border: 2px solid var(--gold); }
+.funnel-stage.good { border-color: rgba(92,229,96,.45); }
+.funnel-stage.average { border-color: rgba(230,195,100,.5); }
+.funnel-stage.poor { border-color: rgba(255,107,107,.55); }
+.funnel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; flex-wrap: wrap; }
+.funnel-name { font: 500 16px 'Ubuntu'; color: var(--desert); }
+.funnel-rate { font: 700 22px 'Ubuntu'; }
+.funnel-bar { height: 8px; background: rgba(255,255,255,.08); border-radius: 4px; margin: .65rem 0 .45rem; overflow: hidden; }
+.funnel-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--aqua-light), var(--megaman)); }
+.funnel-info { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); gap: 1rem; flex-wrap: wrap; }
+
+/* Score */
+.score-wrap { display: flex; align-items: center; gap: 2rem; flex-wrap: wrap; }
+.score-circle { width: 124px; height: 124px; border-radius: 50%; display: flex; align-items: center; justify-content: center; position: relative; flex-shrink: 0; }
+.score-circle::before { content: ''; position: absolute; inset: 9px; background: var(--navy-2); border-radius: 50%; }
+.score-value { position: relative; font: 700 36px 'Ubuntu'; }
+
+/* Recomendações */
+.rec { border: 1px solid var(--line); border-radius: 12px; margin-bottom: .9rem; overflow: hidden; background: var(--navy-3); }
+.rec-head { padding: 1rem 1.25rem; display: flex; gap: 1rem; align-items: flex-start; cursor: pointer; }
+.rec-head:hover { background: rgba(69,189,254,.06); }
+.rec-title { font: 500 16px 'Ubuntu'; color: var(--desert); display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; margin-bottom: .25rem; }
+.rec-desc { font-size: 14px; color: var(--muted); }
+.rec-body { display: none; padding: 1rem 1.25rem 1.25rem; border-top: 1px solid var(--line); font-size: 14px; }
+.rec.open .rec-body { display: block; }
+.rec-body h4 { font-size: 13px; margin: .9rem 0 .4rem; color: var(--megaman); }
+.rec-body h4:first-child { margin-top: 0; }
+.rec-evidence { background: rgba(69,189,254,.08); border-left: 3px solid var(--megaman); padding: .75rem 1rem; border-radius: 0 8px 8px 0; }
+.rec-body ol { padding-left: 1.25rem; }
+.rec-body li::marker { color: var(--gold); font-weight: 700; }
+
+/* Barras horizontais */
+.hbar-row { display: grid; grid-template-columns: minmax(120px, 280px) 1fr 90px; gap: .75rem; align-items: center; font-size: 13px; margin-bottom: .6rem; }
+.hbar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--desert); }
+.hbar-track { height: 14px; background: rgba(255,255,255,.06); border-radius: 4px; overflow: hidden; }
+.hbar-fill { height: 100%; background: var(--megaman); border-radius: 0 4px 4px 0; }
+.hbar-val { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
+
+.empty { text-align: center; padding: 3rem 1.5rem; color: var(--muted); }
+.toast { position: fixed; top: 100px; right: 2rem; padding: .8rem 1.4rem; background: var(--megaman); color: var(--navy); font-weight: 700; border-radius: 999px; box-shadow: var(--shadow); transform: translateX(calc(100% + 3rem)); transition: transform .3s; z-index: 300; }
+.toast.show { transform: none; }
+.toast.error { background: var(--danger); color: var(--white); }
+
+/* Rodapé */
+.footer { border-top: 1px solid var(--line); padding: 1.5rem 2rem; text-align: center; font-size: 12px; color: var(--muted); }
+
+@media (max-width: 768px) {
+    .grid-2 { grid-template-columns: 1fr; }
+    .header { padding: 10px 16px; }
+    .main { padding-left: 16px; padding-right: 16px; }
+    .file-pill { display: none; }
+    .hero { padding: 2rem 1.5rem; }
+    #upload .card-content { padding: 1.25rem; }
+    .hbar-row { grid-template-columns: 1fr 70px; }
+    .hbar-track { grid-column: 1 / -1; grid-row: 2; }
+    .filters input { min-width: 0; width: 100%; }
+}
+.b-perfil { color: #C9A2FF; } .b-leads { color: var(--megaman-light); } .b-engajamento { color: #FF8FB1; }
+.type-select { padding: .3rem .6rem; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--desert); font: 600 12px 'Manrope'; cursor: pointer; max-width: 210px; }
+.type-select option { background: var(--navy-2); }
+.type-select.manual { border-color: var(--gold); color: var(--gold); }
+.type-select:focus { outline: none; border-color: var(--megaman); }td.num { white-space: nowrap; }
+</style>
+</head>
+<body>
+<header class="header">
+    <div class="header-content">
+        <div class="logo">
+            <img src="Logo01-SLight.svg" alt="Grupo Galpão" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+            <div class="logo-fallback">G</div>
+            <div class="logo-text">
+                <h1>GRUPO GALPÃO</h1>
+                <p>Performance &amp; Dados</p>
+            </div>
+        </div>
+        <div class="file-pill" id="file-pill"></div>
+    </div>
+</header>
+
+<main class="main">
+    <nav class="nav-tabs">
+        <button class="nav-tab active" data-tab="upload">📥 Upload</button>
+        <button class="nav-tab" data-tab="overview" disabled>📊 Visão Geral</button>
+        <button class="nav-tab" data-tab="campaigns" disabled>📋 Campanhas <span id="campaign-count"></span></button>
+        <button class="nav-tab" data-tab="analysis" disabled>📈 Análise</button>
+    </nav>
+
+    <!-- Upload -->
+    <section id="upload" class="tab-content active">
+        <div class="hero">
+            <h2>Clareza para decidir. Dados para crescer.</h2>
+            <p>Exporte o relatório de campanhas da Meta Ads ou do Google Ads em CSV e solte aqui. Todos os cálculos são feitos no seu navegador; nada é enviado para servidor.</p>
+        </div>
+        <div class="card">
+            <div class="card-content">
+                <input type="file" id="file-input" accept=".csv,text/csv" hidden>
+                <div class="dropzone" id="dropzone">
+                    <div class="dropzone-icon">📄</div>
+                    <h3>Arraste o CSV aqui ou clique para escolher</h3>
+                    <p class="muted">Colunas esperadas: Nome da campanha, Valor gasto, Impressões, Cliques no link, Visualizações da página de destino, Adições ao carrinho, Finalizações de compra iniciadas, Compras, Valor dos resultados…</p>
+                </div>
+                <div class="options">
+                    <label><input type="checkbox" id="opt-hide-zero" checked> Ignorar campanhas sem investimento</label>
+                    <label>Plataforma dos benchmarks:
+                        <select id="opt-platform">
+                            <option value="meta">Meta Ads</option>
+                            <option value="google">Google Ads</option>
+                        </select>
+                    </label>
+                </div>
+                <div id="upload-msg"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Overview -->
+    <section id="overview" class="tab-content"></section>
+
+    <!-- Campaigns -->
+    <section id="campaigns" class="tab-content">
+        <div class="card">
+            <div class="card-header row">
+                <div class="card-title">Campanhas do relatório</div>
+                <div class="filters">
+                    <input type="search" id="f-search" placeholder="Buscar campanha…">
+                    <select id="f-type">
+                        <option value="">Todos os objetivos</option></select>
+                    <select id="f-status">
+                        <option value="">Todos os status</option>
+                        <option value="active">Ativas</option>
+                        <option value="inactive">Inativas</option>
+                    </select>
+                </div>
+            </div>
+            <div class="table-wrap"><table id="campaign-table"></table></div>
+        </div>
+    </section>
+
+    <!-- Analysis -->
+    <section id="analysis" class="tab-content"></section>
+</main>
+
+<footer class="footer">© 2026 Grupo Galpão · Performance+ · Dados processados localmente no navegador</footer>
+<div id="toast" class="toast"></div>
+
+<script>
+// ---------- Benchmarks ----------
+// good/average: limite para "bom" e "na média". inverse = menor é melhor.
+// Etapas sem fonte oficial (msg, lead, eng, thruplay, visit, follow) são referências internas, ajuste à vontade.
+const STAGE_BENCH_COMMON = {
+    visit: { good: 80, average: 60 }, follow: { good: 30, average: 15 },
+    msg: { good: 20, average: 10 }, lead: { good: 15, average: 8 }, cvr: { good: 4, average: 2 },
+    eng: { good: 3, average: 1.5 }, thruplay: { good: 25, average: 15 }
+};
+const BENCHMARKS = {
+    meta: {
+        ctr: { good: 1.5, average: 0.9 },
+        cpc: { good: 0.5, average: 1.0, inverse: true },
+        cpm: { good: 20, average: 35, inverse: true },
+        roas: { good: 4.0, average: 2.5 },
+        frequency: { good: 2.5, average: 3.5, inverse: true },
+        stages: { ctr: { good: 1.5, average: 0.9 }, lpv: { good: 85, average: 70 }, atc: { good: 12, average: 6 }, checkout: { good: 60, average: 40 }, purchase: { good: 70, average: 50 }, ...STAGE_BENCH_COMMON }
+    },
+    google: {
+        ctr: { good: 2.5, average: 1.5 },
+        cpc: { good: 0.8, average: 1.5, inverse: true },
+        cpm: { good: 25, average: 45, inverse: true },
+        roas: { good: 5.0, average: 3.0 },
+        frequency: { good: 2.5, average: 3.5, inverse: true },
+        stages: { ctr: { good: 2.5, average: 1.5 }, lpv: { good: 88, average: 75 }, atc: { good: 15, average: 8 }, checkout: { good: 65, average: 45 }, purchase: { good: 75, average: 55 }, ...STAGE_BENCH_COMMON }
+    }
+};
+
+// Cabeçalhos do CSV da Meta (normalizados) -> campo interno
+const COLUMN_MAP = {
+    // Cada lista aceita o nome da Meta e, depois, o equivalente do Google Ads
+    name: ['nome da campanha', 'campaign name', 'campanha', 'campaign'],
+    status: ['veiculacao da campanha', 'campaign delivery', 'status da campanha', 'campaign status'],
+    googleType: ['tipo de campanha', 'campaign type'],
+    start: ['inicio dos relatorios', 'reporting starts'],
+    end: ['encerramento dos relatorios', 'reporting ends'],
+    resultIndicator: ['indicador de resultados', 'result indicator'],
+    results: ['resultados', 'results'],
+    reach: ['alcance', 'reach'],
+    frequency: ['frequencia', 'frequency'],
+    spend: ['valor gasto (brl)', 'valor gasto', 'amount spent (brl)', 'amount spent', 'custo', 'cost'],
+    impressions: ['impressoes', 'impressions', 'impr.', 'impr'],
+    linkClicks: ['cliques no link', 'link clicks', 'cliques', 'clicks'],
+    allClicks: ['cliques (todos)', 'clicks (all)'],
+    lpv: ['visualizacoes da pagina de destino', 'landing page views'],
+    addToCart: ['adicoes ao carrinho', 'adds to cart'],
+    checkout: ['finalizacoes de compra iniciadas', 'checkouts initiated'],
+    purchases: ['compras', 'purchases', 'conversoes', 'conversions'],
+    revenue: ['valor de conversao da compra', 'valor dos resultados', 'purchases conversion value', 'results value', 'valor conv.', 'valor de conv.', 'conv. value'],
+    followers: ['seguidores no instagram', 'instagram followers'],
+    conversations: ['conversas por mensagem iniciadas', 'messaging conversations started'],
+    leads: ['leads', 'cadastros', 'leads (formulario)'],
+    engagement: ['engajamento com a publicacao', 'post engagements', 'engajamentos com a publicacao'],
+    thruplays: ['thruplays', 'reproducoes do video ate 75%', 'thruplay'],
+    videoPlays: ['reproducoes do video', 'video plays', 'visualizacoes de video de 3 segundos', '3-second video plays']
+};
+
+// ---------- Tipos de campanha ----------
+// Cada tipo define: como é detectado, qual é o resultado principal e o funil próprio.
+// O resultado principal usa a coluna dedicada quando existe; senão, "Resultados" quando o indicador bate com o tipo.
+const TYPES = {
+    ecommerce: {
+        label: 'Vendas (site)', icon: '🛒',
+        indicator: /purchase|add_to_cart|initiate_checkout/,
+        name: /venda|compra|catalogo|conversao|conversoes|purchase|\bpur\b|advantage|shopping|\bsite\b|saldao/,
+        result: c => c.purchases || null, resultLabel: 'compras'
+    },
+    mensagens: {
+        label: 'Mensagens', icon: '💬',
+        indicator: /messag|conversation/,
+        name: /whatsapp|mensage|\bmsg\b|direct/,
+        result: c => c.conversations || (TYPES.mensagens.indicator.test(c.ind) ? c.results : null), resultLabel: 'conversas'
+    },
+    leads: {
+        label: 'Leads', icon: '📝',
+        indicator: /lead|complete_registration/,
+        name: /\blead|cadastro|formulario/,
+        result: c => c.leads || (TYPES.leads.indicator.test(c.ind) ? c.results : null), resultLabel: 'leads'
+    },
+    perfil: {
+        label: 'Visitas ao perfil', icon: '👤',
+        indicator: /profile_visit/,
+        name: /perfil|seguidor/,
+        result: c => c.results || null, resultLabel: 'visitas'
+    },
+    trafego: {
+        label: 'Tráfego (site)', icon: '🔗',
+        indicator: /link_click|landing_page_view/,
+        name: /trafego|visitas/,
+        result: c => c.lpv || c.linkClicks || null, resultLabel: 'visualizações da página'
+    },
+    engajamento: {
+        label: 'Engajamento / Vídeo', icon: '❤️',
+        indicator: /engagement|video_view|thruplay|like|post_reaction/,
+        name: /engajamento|engage|video|\bvv\b|videoview/,
+        result: c => c.engagement || c.thruplays || (TYPES.engajamento.indicator.test(c.ind) ? c.results : null), resultLabel: 'engajamentos'
+    },
+    alcance: {
+        label: 'Alcance / Reconhecimento', icon: '📣',
+        indicator: /^reach|impressions|ad_recall/,
+        name: /reconhecimento|alcance|awareness/,
+        result: c => c.reach || null, resultLabel: 'pessoas alcançadas'
+    },
+    outro: { label: 'Outro', icon: '•', indicator: /$^/, name: /$^/, result: c => c.results || null, resultLabel: 'resultados' }
+};
+const TYPE_KEYS = Object.keys(TYPES);
+// Detecção pelo nome, em 3 passos:
+// 1. canais específicos no nome todo ("[ENGAJAMENTO/WHATSAPP]" é mensagens; "[TRÁFEGO] CRESCIMENTO DE PERFIL" é perfil)
+// 2. objetivo escrito entre colchetes ("[VENDAS/COMPRA] - Vídeos" é vendas; "[ENGAJAMENTO/VÍDEOS]" é engajamento)
+// 3. nome todo, vendas antes de vídeo ("*2907 - Vídeos Julho//Vendas" é vendas)
+const NAME_SPECIFIC = ['mensagens', 'leads', 'perfil'];
+const NAME_ORDER = ['alcance', 'ecommerce', 'engajamento', 'trafego'];
+function classifyByName(rawName) {
+    const name = norm(rawName);
+    const tags = (name.match(/\[[^\]]*\]/g) || []).join(' ');
+    for (const k of NAME_SPECIFIC) if (TYPES[k].name.test(name)) return k;
+    if (tags) for (const k of NAME_ORDER) if (TYPES[k].name.test(tags)) return k;
+    for (const k of NAME_ORDER) if (TYPES[k].name.test(name)) return k;
+    return 'outro';
+}
+
+let state = { fileName: '', allRows: [], campaigns: [], selectedId: null, sort: { key: 'spend', dir: -1 } };
+
+// ---------- Utilidades ----------
+const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/^﻿/, '').trim().toLowerCase();
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const div = (a, b) => (b > 0 ? a / b : null);
+const ratePct = (a, b) => (b > 0 ? (a / b) * 100 : null);
+const brl = v => v == null ? '—' : 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const brl0 = v => v == null ? '—' : 'R$ ' + v.toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+const int = v => v == null ? '—' : Math.round(v).toLocaleString('pt-BR');
+const pct = (v, d = 2) => v == null ? '—' : v.toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d }) + '%';
+const mult = v => v == null ? '—' : v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + 'x';
+const statusLabel = c => (c.status === 'active' ? 'Ativa' : 'Inativa');
+const scoreStatus = s => (s == null ? 'none' : s >= 80 ? 'good' : s >= 60 ? 'average' : 'poor');
+
+// Exportação em ";" (pt-BR) usa vírgula decimal e ponto de milhar; em "," usa ponto decimal
+let decimalComma = false;
+
+function parseNumber(raw) {
+    if (raw == null) return 0;
+    let s = String(raw).trim().replace(/[R$\s%]/g, '');
+    if (!s || s === '-') return 0;
+    const groups = sep => s.split(sep).length - 1;
+    const isThousands = sep => new RegExp('^-?\\d{1,3}(\\' + sep + '\\d{3})+$').test(s);
+    if (s.includes(',') && s.includes('.')) s = s.lastIndexOf(',') > s.lastIndexOf('.') ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
+    else if (s.includes(',')) s = isThousands(',') && (!decimalComma || groups(',') > 1) ? s.replace(/,/g, '') : s.replace(',', '.');
+    else if (isThousands('.') && (decimalComma || groups('.') > 1)) s = s.replace(/\./g, '');
+    const n = parseFloat(s);
+    return isFinite(n) ? n : 0;
+}
+
+// Parser CSV com suporte a aspas, quebras de linha em campos e delimitador , ou ;
+function parseCSV(text) {
+    text = text.replace(/^﻿/, '');
+    // O Google Ads põe linhas de título antes do cabeçalho; por isso o delimitador é medido no início do arquivo todo
+    const head = text.slice(0, 4000);
+    const count = ch => head.split(ch).length - 1;
+    const delim = [';', '\t', ','].reduce((best, ch) => (count(ch) > count(best) ? ch : best), ',');
+    const rows = []; let row = []; let field = ''; let inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+        const c = text[i];
+        if (inQuotes) {
+            if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else inQuotes = false; }
+            else field += c;
+        } else if (c === '"') inQuotes = true;
+        else if (c === delim) { row.push(field); field = ''; }
+        else if (c === '\n' || c === '\r') {
+            if (c === '\r' && text[i + 1] === '\n') i++;
+            row.push(field); field = '';
+            if (row.some(f => f.trim() !== '')) rows.push(row);
+            row = [];
+        } else field += c;
+    }
+    row.push(field);
+    if (row.some(f => f.trim() !== '')) rows.push(row);
+    // Formato numérico: ";" é sempre pt-BR; com "," (Google Ads em pt-BR) detecta pelos próprios valores, ex.: "4.211,18"
+    // Só conta valores sem ambiguidade: separador seguido de 1–2 ou 4+ dígitos ("4.211,18" / "748.21");
+    // "1,234" e "1.234" podem ser milhar nos dois formatos e não votam
+    if (delim === ';') decimalComma = true;
+    else {
+        let br = 0, us = 0;
+        rows.forEach(r => r.forEach(f => {
+            const v = f.trim().replace(/%$/, '');
+            if (/^-?[\d.]*\d,(\d{1,2}|\d{4,})$/.test(v)) br++;
+            else if (/^-?[\d,]*\d\.(\d{1,2}|\d{4,})$/.test(v)) us++;
+        }));
+        decimalComma = br > us;
+    }
+    return rows;
+}
+
+function resolveColumns(header) {
+    const h = header.map(norm);
+    const idx = {};
+    for (const [key, names] of Object.entries(COLUMN_MAP)) {
+        idx[key] = -1;
+        for (const n of names) { const i = h.indexOf(n); if (i > -1) { idx[key] = i; break; } }
+    }
+    return idx;
+}
+
+// O indicador de resultado (objetivo real da Meta) tem prioridade; o nome da campanha é o plano B
+// Tipo de campanha do Google Ads -> objetivo
+const GOOGLE_TYPE_MAP = [
+    [/pesquisa|search|shopping|performance max|pmax/, 'ecommerce'],
+    [/video|youtube/, 'engajamento'],
+    [/display|demand gen|discovery/, 'trafego']
+];
+
+function classify(c) {
+    if (c.googleType) {
+        const hit = GOOGLE_TYPE_MAP.find(([re]) => re.test(c.googleType));
+        // Pesquisa sem conversões e sem nome de venda é tráfego; PMax e Shopping são sempre vendas
+        const searchWithoutSales = /pesquisa|search/.test(c.googleType) && !c.purchases && !c.revenue && !TYPES.ecommerce.name.test(norm(c.name));
+        if (hit) return searchWithoutSales ? 'trafego' : hit[1];
+    }
+    if (c.purchases > 0 && !TYPES.mensagens.indicator.test(c.ind)) return 'ecommerce';
+    if (c.ind) for (const k of TYPE_KEYS) if (TYPES[k].indicator.test(c.ind)) return k;
+    return classifyByName(c.name);
+}
+
+// ---------- Ajuste manual do objetivo (lembrado neste navegador, por nome de campanha) ----------
+const OVERRIDE_KEY = 'gg-analytics-type-overrides';
+function loadOverrides() { try { return JSON.parse(localStorage.getItem(OVERRIDE_KEY)) || {}; } catch { return {}; } }
+function saveOverride(name, type) {
+    try {
+        const o = loadOverrides();
+        if (type) o[name] = type; else delete o[name];
+        localStorage.setItem(OVERRIDE_KEY, JSON.stringify(o));
+    } catch { /* armazenamento indisponível: o ajuste vale só nesta sessão */ }
+}
+
+function buildCampaign(r, idx, i, overrides) {
+    const get = k => (idx[k] > -1 ? r[idx[k]] : '');
+    const num = k => parseNumber(get(k));
+    const c = {
+        id: 'c' + i,
+        name: get('name').trim() || '(sem nome)',
+        status: /^(active|ativ|enabled|habilitad)/.test(norm(get('status'))) ? 'active' : 'inactive',
+        start: get('start'), end: get('end'),
+        resultIndicator: get('resultIndicator'),
+        ind: norm(get('resultIndicator')),
+        googleType: norm(get('googleType')),
+        results: num('results'), reach: num('reach'), frequency: num('frequency'),
+        spend: num('spend'), impressions: num('impressions'),
+        linkClicks: num('linkClicks'), allClicks: num('allClicks'), lpv: num('lpv'),
+        addToCart: num('addToCart'), checkout: num('checkout'), purchases: num('purchases'),
+        revenue: num('revenue'), followers: num('followers'),
+        conversations: num('conversations'), leads: num('leads'),
+        engagement: num('engagement'), thruplays: num('thruplays'), videoPlays: num('videoPlays')
+    };
+    // "Valor dos resultados" só é receita quando o resultado é compra
+    if (c.purchases === 0 && !/purchase/.test(c.ind)) c.revenue = 0;
+    c.autoType = classify(c);
+    const manual = overrides[c.name];
+    c.type = manual && TYPES[manual] ? manual : c.autoType;
+    c.typeManual = c.type !== c.autoType;
+    return withDerived(c);
+}
+
+function withDerived(c) {
+    c.ctr = ratePct(c.linkClicks, c.impressions);
+    c.cpc = div(c.spend, c.linkClicks);
+    c.cpm = div(c.spend, c.impressions) == null ? null : div(c.spend, c.impressions) * 1000;
+    c.lpvRate = ratePct(c.lpv, c.linkClicks);
+    c.costPerLpv = div(c.spend, c.lpv);
+    c.convRate = ratePct(c.purchases, c.lpv);
+    c.roas = c.revenue > 0 ? div(c.revenue, c.spend) : null;
+    c.cpa = div(c.spend, c.purchases);
+    c.aov = div(c.revenue, c.purchases);
+    c.mainResult = TYPES[c.type].result(c);
+    c.costPerResult = div(c.spend, c.mainResult);
+    c.costPerFollower = div(c.spend, c.followers);
+    c.retention = c.type === 'perfil' ? ratePct(c.followers, c.mainResult) : null;
+    c.costPer1000Reach = div(c.spend, c.reach) == null ? null : div(c.spend, c.reach) * 1000;
+    return c;
+}
+
+function setType(id, type) {
+    const c = state.allRows.find(x => x.id === id);
+    if (!c || !TYPES[type]) return;
+    c.type = type;
+    c.typeManual = type !== c.autoType;
+    saveOverride(c.name, c.typeManual ? type : null);
+    withDerived(c);
+    renderAll();
+    toast(`Objetivo de “${c.name}” alterado para ${TYPES[type].label}.`);
+}
+
+const SUM_KEYS = ['results', 'reach', 'spend', 'impressions', 'linkClicks', 'allClicks', 'lpv', 'addToCart', 'checkout', 'purchases', 'revenue', 'followers', 'conversations', 'leads', 'engagement', 'thruplays', 'videoPlays'];
+function sumCampaigns(list, name = 'Total', type = 'outro') {
+    const t = { id: 'total', name, type, ind: '', typeManual: true };
+    SUM_KEYS.forEach(k => t[k] = list.reduce((s, c) => s + (c[k] || 0), 0));
+    // Resultado principal somado a partir de cada campanha, para respeitar a origem de cada uma
+    const totalResult = list.reduce((s, c) => s + (c.mainResult || 0), 0);
+    withDerived(t);
+    t.mainResult = totalResult || null;
+    t.costPerResult = div(t.spend, t.mainResult);
+    t.retention = type === 'perfil' ? ratePct(t.followers, t.mainResult) : null;
+    // Alcance não soma entre campanhas (a mesma pessoa pode ser alcançada por várias):
+    // o total é só um teto, então custo por alcance e frequência ficam de fora
+    t.reachIsSum = list.length > 1;
+    if (t.reachIsSum) { t.costPer1000Reach = null; t.frequency = null; }
+    else if (list.length === 1) t.frequency = list[0].frequency;
+    return t;
+}
+
+// ---------- Análise ----------
+function status(value, bm) {
+    if (value == null || !bm) return 'none';
+    if (bm.inverse) return value <= bm.good ? 'good' : value <= bm.average ? 'average' : 'poor';
+    return value >= bm.good ? 'good' : value >= bm.average ? 'average' : 'poor';
+}
+
+// Funil próprio de cada tipo de campanha
+function funnelDefs(c) {
+    const ctr = { key: 'ctr', name: 'Impressões → Cliques no link', from: c.impressions, to: c.linkClicks, toLabel: 'cliques' };
+    const lpv = { key: 'lpv', name: 'Cliques → Visualização da página', from: c.linkClicks, to: c.lpv, toLabel: 'visualizações' };
+    switch (c.type) {
+        // Sem etapas intermediárias no arquivo (ex.: Google Ads), o funil vai direto de clique a conversão
+        case 'ecommerce': if (!c.lpv && !c.addToCart && !c.checkout) return [ctr,
+            { key: 'cvr', name: 'Cliques → Conversões', from: c.linkClicks, to: c.purchases, toLabel: 'conversões' }];
+            return [ctr, lpv,
+            { key: 'atc', name: 'Página → Adição ao carrinho', from: c.lpv, to: c.addToCart, toLabel: 'adições' },
+            { key: 'checkout', name: 'Carrinho → Checkout iniciado', from: c.addToCart, to: c.checkout, toLabel: 'checkouts' },
+            { key: 'purchase', name: 'Checkout → Compra', from: c.checkout, to: c.purchases, toLabel: 'compras' }];
+        case 'mensagens': return [ctr,
+            { key: 'msg', name: 'Cliques → Conversas iniciadas', from: c.linkClicks, to: c.mainResult || 0, toLabel: 'conversas' }];
+        case 'leads': return [ctr, lpv,
+            { key: 'lead', name: c.lpv ? 'Página → Lead' : 'Cliques → Lead', from: c.lpv || c.linkClicks, to: c.mainResult || 0, toLabel: 'leads' }];
+        case 'perfil': return [ctr,
+            { key: 'visit', name: 'Cliques → Visitas ao perfil', from: c.linkClicks, to: c.mainResult || 0, toLabel: 'visitas' },
+            { key: 'follow', name: 'Visitas ao perfil → Seguidores', from: c.mainResult || 0, to: c.followers, toLabel: 'seguidores' }];
+        case 'trafego': return [ctr, lpv];
+        case 'engajamento': return [
+            { key: 'eng', name: 'Impressões → Engajamentos', from: c.impressions, to: c.engagement || c.mainResult || 0, toLabel: 'engajamentos' },
+            ...(c.videoPlays ? [{ key: 'thruplay', name: 'Reproduções → ThruPlays', from: c.videoPlays, to: c.thruplays, toLabel: 'ThruPlays' }] : [])];
+        case 'alcance': return [];
+        default: return [ctr];
+    }
+}
+
+function funnelStages(c) {
+    const bm = BENCHMARKS[platform()].stages;
+    return funnelDefs(c).filter(d => d.from > 0).map(d => {
+        const rate = (d.to / d.from) * 100;
+        const b = bm[d.key];
+        // gap relativo ao benchmark médio (positivo = abaixo)
+        const gap = ((b.average - rate) / b.average) * 100;
+        return { ...d, rate, benchmark: b, status: status(rate, b), gap, lost: Math.max(0, d.from - d.to) };
+    });
+}
+
+function analyze(c) {
+    const bm = BENCHMARKS[platform()];
+    const stages = funnelStages(c);
+    // Score: média do desempenho de cada etapa relativo ao benchmark "bom" (cap 100)
+    const parts = stages.map(s => Math.min(100, (s.rate / s.benchmark.good) * 100));
+    if (c.type === 'ecommerce' && c.roas != null) parts.push(Math.min(100, (c.roas / bm.roas.good) * 100));
+    // Alcance não tem funil: o score sai de CPM e frequência
+    if (c.type === 'alcance' && c.cpm != null) parts.push(Math.min(100, (bm.cpm.good / c.cpm) * 100));
+    if (c.type === 'alcance' && c.frequency) parts.push(Math.min(100, (bm.frequency.good / c.frequency) * 100));
+    const score = parts.length ? Math.round(parts.reduce((a, b) => a + b, 0) / parts.length) : null;
+    const weakest = stages.length ? stages.reduce((a, b) => (b.gap > a.gap ? b : a)) : null;
+    return { stages, score, weakest, recs: recommendations(c, stages) };
+}
+
+const REC_TEXT = {
+    ctr: { title: 'CTR abaixo do esperado', area: '🎨 Criativo', steps: ['Testar novos ganchos nos 3 primeiros segundos do vídeo', 'Comparar criativos atuais com os de melhor CTR da conta', 'Revisar copy e chamada para ação', 'Checar frequência: acima de ~3 indica fadiga criativa'] },
+    lpv: { title: 'Perda entre clique e chegada ao site', area: '👁️ Carregamento', steps: ['Medir velocidade da landing page no mobile (PageSpeed)', 'Remover redirecionamentos e scripts pesados', 'Confirmar que a URL de destino e o pixel estão corretos', 'Comprimir imagens e usar lazy loading'] },
+    atc: { title: 'Poucos visitantes adicionam ao carrinho', area: '🖱️ Página de produto', steps: ['Conferir se o produto do anúncio é o que aparece na página', 'Deixar preço, frete e parcelamento visíveis', 'Destacar o botão de compra e as opções de tamanho', 'Adicionar avaliações e fotos de uso'] },
+    checkout: { title: 'Carrinho não avança para o checkout', area: '🛒 Carrinho', steps: ['Mostrar o frete antes do checkout', 'Reduzir distrações no carrinho', 'Testar cupom de primeira compra', 'Ativar recuperação de carrinho abandonado'] },
+    cvr: { title: 'Poucos cliques viram conversão', area: '🎯 Conversão', steps: ['Conferir se a página de destino corresponde à busca/anúncio', 'Negativar termos de pesquisa que geram clique sem intenção de compra', 'Verificar se a tag de conversão está disparando corretamente', 'Testar a velocidade da página no mobile'] },
+    purchase: { title: 'Abandono elevado no checkout', area: '💳 Checkout', steps: ['Reduzir etapas e campos obrigatórios', 'Oferecer Pix e checkout como convidado', 'Exibir selos de segurança', 'Verificar erros de pagamento no gateway'] },
+    msg: { title: 'Cliques não viram conversas', area: '💬 Mensagens', steps: ['Usar mensagem de boas-vindas com perguntas prontas', 'Deixar claro no criativo que o clique abre o WhatsApp/Direct', 'Testar oferta específica para quem chama (cupom, catálogo)', 'Conferir se o número/conta conectado está respondendo rápido'] },
+    lead: { title: 'Poucos visitantes viram leads', area: '📝 Formulário', steps: ['Reduzir campos do formulário ao essencial', 'Usar formulário instantâneo com campos pré-preenchidos', 'Deixar a recompensa do cadastro explícita', 'Adicionar prova social perto do formulário'] },
+    visit: { title: 'Cliques não viram visitas ao perfil', area: '👤 Perfil', steps: ['Conferir se o anúncio leva direto ao perfil do Instagram', 'Testar CTA explícito ("Visite nosso perfil")', 'Evitar criativos que geram clique acidental'] },
+    follow: { title: 'Visitantes não viram seguidores', area: '📸 Perfil do Instagram', steps: ['Revisar bio: proposta clara e link útil', 'Fixar os 3 posts mais fortes no topo do perfil', 'Manter destaques organizados (produtos, lojas, avaliações)', 'Manter o feed coerente com o criativo do anúncio'] },
+    eng: { title: 'Taxa de engajamento baixa', area: '❤️ Conteúdo', steps: ['Testar formatos nativos (Reels, carrossel)', 'Abrir com pergunta ou gancho que convide a comentar', 'Usar conteúdo de bastidores e prova social', 'Segmentar para públicos que já interagem com a marca'] },
+    thruplay: { title: 'Poucas pessoas assistem ao vídeo', area: '🎬 Vídeo', steps: ['Encurtar o vídeo e colocar o melhor nos 3 primeiros segundos', 'Usar legendas: a maioria assiste sem som', 'Formato vertical 9:16 para Reels e Stories'] }
+};
+
+function recommendations(c, stages) {
+    const bm = BENCHMARKS[platform()];
+    const recs = stages.filter(s => s.status !== 'good' && s.gap > 0).map(s => {
+        const extra = Math.max(0, Math.round((s.benchmark.average / 100) * s.from) - s.to);
+        return {
+            priority: s.status === 'poor' ? 'high' : 'medium', gap: s.gap, ...REC_TEXT[s.key],
+            desc: `${s.name}: ${pct(s.rate)} contra benchmark médio de ${pct(s.benchmark.average, 1)}.`,
+            evidence: `De ${int(s.from)} na etapa anterior, ${int(s.to)} ${s.toLabel} (${int(s.lost)} perdidos).`,
+            impact: extra > 0 ? `Atingir o benchmark médio renderia cerca de ${int(extra)} ${s.toLabel} a mais com o mesmo investimento.` : ''
+        };
+    });
+    if (c.frequency > 3) recs.push({ priority: 'medium', gap: 0, title: 'Frequência alta', area: '🔁 Público', desc: `Frequência média de ${c.frequency.toFixed(2)} no período.`, evidence: `${int(c.impressions)} impressões para ${int(c.reach)} pessoas alcançadas.`, impact: 'Reduzir fadiga tende a baixar CPM e recuperar CTR.', steps: ['Ampliar o público ou excluir quem já converteu', 'Rodar novos criativos', 'Limitar orçamento em públicos pequenos'] });
+    if (c.type === 'ecommerce' && c.roas != null && status(c.roas, bm.roas) === 'poor') recs.push({ priority: 'high', gap: 100, title: 'ROAS abaixo do mínimo', area: '💰 Retorno', desc: `ROAS de ${mult(c.roas)} contra ${mult(bm.roas.average)} de referência.`, evidence: `${brl(c.spend)} investidos geraram ${brl(c.revenue)} em receita atribuída.`, impact: '', steps: ['Concentrar verba nos conjuntos e criativos com ROAS acima da média', 'Revisar ticket médio e ofertas de kit/combo', 'Pausar o que não converte após gasto de 2–3x o CPA alvo'] });
+    if (c.type === 'alcance' && c.cpm != null && status(c.cpm, bm.cpm) === 'poor') recs.push({ priority: 'medium', gap: 50, title: 'CPM alto para reconhecimento', area: '📣 Alcance', desc: `CPM de ${brl(c.cpm)} contra ${brl(bm.cpm.average)} de referência.`, evidence: `${brl(c.spend)} para ${int(c.impressions)} impressões.`, impact: '', steps: ['Ampliar o público ou usar Advantage+', 'Liberar todos os posicionamentos', 'Testar criativos mais leves e nativos'] });
+    return recs.sort((a, b) => (a.priority === b.priority ? b.gap - a.gap : a.priority === 'high' ? -1 : 1));
+}
+
+// ---------- Métricas exibidas por tipo ----------
+// Cada tipo mostra só o que faz sentido para o seu objetivo.
+function typeCards(c) {
+    const bm = BENCHMARKS[platform()];
+    const res = (label, sub) => statCard(label, int(c.mainResult), sub);
+    switch (c.type) {
+        case 'ecommerce': return [
+            statCard('Receita atribuída', brl(c.revenue), `${int(c.purchases)} compras`),
+            statCard('ROAS', mult(c.roas), `Referência: ${mult(bm.roas.average)} a ${mult(bm.roas.good)}`, status(c.roas, bm.roas)),
+            statCard('CPA', brl(c.cpa)),
+            statCard('Ticket médio', brl(c.aov)),
+            ...(c.lpv ? [statCard('Conversão (LPV → compra)', pct(c.convRate)),
+                statCard('Custo por LPV', brl(c.costPerLpv), `${int(c.lpv)} visualizações da página`)]
+                : [statCard('Taxa de conversão (clique → conversão)', pct(ratePct(c.purchases, c.linkClicks)))])];
+        case 'mensagens': return [
+            res('Conversas iniciadas', `${pct(ratePct(c.mainResult, c.linkClicks), 1)} dos cliques no link`),
+            statCard('Custo por conversa', brl(c.costPerResult)),
+            ...(c.purchases ? [statCard('Compras atribuídas', int(c.purchases), c.revenue ? `Receita: ${brl(c.revenue)}` : '')] : [])];
+        case 'leads': return [
+            res('Leads', c.lpv ? `${pct(ratePct(c.mainResult, c.lpv), 1)} das visualizações da página` : ''),
+            statCard('Custo por lead (CPL)', brl(c.costPerResult))];
+        case 'perfil': return [
+            res('Visitas ao perfil', `${pct(ratePct(c.mainResult, c.linkClicks), 1)} dos cliques no link`),
+            statCard('Custo por visita', brl(c.costPerResult)),
+            statCard('Seguidores no Instagram', int(c.followers)),
+            statCard('Custo por seguidor', brl(c.costPerFollower), `${brl(c.spend)} ÷ ${int(c.followers)} seguidores`),
+            statCard('Retenção (visita → seguidor)', pct(c.retention, 1), `${int(c.followers)} de ${int(c.mainResult)} visitantes viraram seguidores`, status(c.retention, bm.stages.follow))];
+        case 'trafego': return [
+            statCard('Visualizações da página', int(c.lpv), `${pct(c.lpvRate, 1)} dos cliques chegaram ao site`, status(c.lpvRate, bm.stages.lpv)),
+            statCard('Custo por LPV', brl(c.costPerLpv))];
+        case 'engajamento': return [
+            statCard('Engajamentos', int(c.engagement || c.mainResult), `Taxa: ${pct(ratePct(c.engagement || c.mainResult, c.impressions))} das impressões`),
+            statCard('Custo por engajamento', brl(div(c.spend, c.engagement || c.mainResult))),
+            ...(c.thruplays ? [statCard('ThruPlays', int(c.thruplays), `Custo por ThruPlay: ${brl(div(c.spend, c.thruplays))}`)] : []),
+            ...(c.followers ? [statCard('Seguidores no Instagram', int(c.followers), `Custo por seguidor: ${brl(c.costPerFollower)}`)] : [])];
+        case 'alcance': return [
+            statCard(c.reachIsSum ? 'Alcance somado' : 'Pessoas alcançadas', int(c.reach), c.reachIsSum ? 'Soma das campanhas: pessoas podem se repetir' : ''),
+            ...(c.reachIsSum ? [] : [statCard('Custo por 1.000 alcançados', brl(c.costPer1000Reach)),
+            statCard('Frequência', c.frequency ? c.frequency.toFixed(2) : '—', 'Ideal entre 1,5 e 3 no período', status(c.frequency || null, bm.frequency))])];
+        default: return [res('Resultados', esc(c.resultIndicator)), statCard('Custo por resultado', brl(c.costPerResult))];
+    }
+}
+
+// ---------- Fluxo de arquivo ----------
+const platform = () => document.getElementById('opt-platform').value;
+
+function handleFile(file) {
+    if (!file) return;
+    if (!/\.csv$/i.test(file.name) && file.type !== 'text/csv') return uploadError('O arquivo precisa ser .csv.');
+    const reader = new FileReader();
+    reader.onload = e => {
+        // O Google Ads às vezes exporta em UTF-16 (BOM FF FE); a Meta exporta em UTF-8
+        const bytes = new Uint8Array(e.target.result);
+        const encoding = bytes[0] === 0xFF && bytes[1] === 0xFE ? 'utf-16le' : bytes[0] === 0xFE && bytes[1] === 0xFF ? 'utf-16be' : 'utf-8';
+        try { loadCSV(new TextDecoder(encoding).decode(bytes), file.name); }
+        catch (err) { uploadError('Não foi possível ler o CSV: ' + err.message); }
+    };
+    reader.onerror = () => uploadError('Falha ao ler o arquivo.');
+    reader.readAsArrayBuffer(file);
+}
+
+function uploadError(msg) {
+    document.getElementById('upload-msg').innerHTML = `<div class="alert alert-danger">⚠️ ${esc(msg)}</div>`;
+    toast(msg, true);
+}
+
+function loadCSV(text, fileName) {
+    const rows = parseCSV(text);
+    if (rows.length < 2) throw new Error('arquivo vazio ou sem linhas de dados.');
+    // O cabeçalho é a primeira linha que tem nome da campanha e investimento (o Google Ads põe título e período antes)
+    const headerAt = rows.slice(0, 15).findIndex(r => { const ix = resolveColumns(r); return ix.name > -1 && ix.spend > -1; });
+    const idx = resolveColumns(rows[Math.max(0, headerAt)]);
+    const missing = ['name', 'spend', 'impressions'].filter(k => idx[k] === -1);
+    if (missing.length) throw new Error('colunas obrigatórias não encontradas: ' + missing.map(k => COLUMN_MAP[k][0]).join(', ') + '.');
+
+    const overrides = loadOverrides();
+    // Linhas de total do Google Ads ("Total: Conta", "Total: Pesquisa"…) não são campanhas
+    const dataRows = rows.slice(headerAt + 1).filter(r => !r.some(f => /^total:/.test(norm(f))));
+    state.allRows = dataRows.map((r, i) => buildCampaign(r, idx, i, overrides));
+    const isGoogle = idx.googleType > -1;
+    // A plataforma segue o arquivo, a menos que o usuário tenha escolhido uma na mão
+    if (!state.platformChosen) document.getElementById('opt-platform').value = isGoogle ? 'google' : 'meta';
+    state.fileName = fileName;
+    state.selectedId = null;
+    applyFilterOption();
+
+    const first = state.allRows[0];
+    const period = first && first.start ? ` · ${fmtDate(first.start)} a ${fmtDate(first.end)}` : '';
+    document.getElementById('file-pill').textContent = fileName + period;
+    const manual = state.allRows.filter(c => c.typeManual).length;
+    let msg = `<div class="alert alert-info">✓ <strong>${esc(fileName)}</strong>: ${state.allRows.length} campanhas lidas, ${state.campaigns.length} em análise.${manual ? ` ${manual} com objetivo ajustado manualmente antes.` : ''}</div>`;
+    const optionalMissing = ['linkClicks', 'lpv', 'purchases', 'revenue', 'followers', 'conversations'].filter(k => idx[k] === -1);
+    // O Google Ads não tem essas colunas por natureza; o aviso só vale para a Meta
+    if (optionalMissing.length && !isGoogle) msg += `<div class="alert alert-warning">Colunas não encontradas (as métricas correspondentes ficam vazias): ${optionalMissing.map(k => COLUMN_MAP[k][0]).join(', ')}.</div>`;
+    document.getElementById('upload-msg').innerHTML = msg;
+    toast('CSV carregado!');
+    switchTab(state.campaigns.length ? 'overview' : 'upload');
+}
+
+function applyFilterOption() {
+    const hideZero = document.getElementById('opt-hide-zero').checked;
+    state.campaigns = state.allRows.filter(c => !hideZero || c.spend > 0 || c.impressions > 0);
+    ['overview', 'campaigns'].forEach(t => document.querySelector(`[data-tab="${t}"]`).disabled = !state.allRows.length);
+    document.getElementById('campaign-count').textContent = state.allRows.length ? `(${state.campaigns.length})` : '';
+    if (state.selectedId && !state.campaigns.some(c => c.id === state.selectedId)) state.selectedId = null;
+    // Campanha analisada saiu da lista: limpa a aba e, se ela estava aberta, volta para as campanhas
+    if (!state.selectedId) {
+        document.getElementById('analysis').innerHTML = '';
+        if (document.getElementById('analysis').classList.contains('active')) switchTab(state.allRows.length ? 'campaigns' : 'upload');
+    }
+    document.querySelector('[data-tab="analysis"]').disabled = !state.selectedId;
+    renderAll();
+}
+
+function fmtDate(s) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || '');
+    return m ? `${m[3]}/${m[2]}/${m[1]}` : esc(s || '');
+}
+
+// ---------- Render ----------
+function renderAll() {
+    if (!state.allRows.length) return;
+    renderOverview();
+    renderTable();
+    if (state.selectedId) renderAnalysis();
+}
+
+function statCard(label, value, sub = '', st = '') {
+    return `<div class="stat-card ${st}"><div class="stat-label">${label}</div><div class="stat-value ${st && st !== 'none' ? 'c-' + st : ''}">${value}</div>${sub ? `<div class="stat-sub">${sub}</div>` : ''}</div>`;
+}
+
+function hbars(list, valueFn, fmt) {
+    const max = Math.max(...list.map(valueFn), 0);
+    if (!list.length || max <= 0) return '<p class="muted">Sem dados.</p>';
+    return list.map(c => `
+        <div class="hbar-row" title="${esc(c.name)}">
+            <div class="hbar-label">${esc(c.name)}</div>
+            <div class="hbar-track"><div class="hbar-fill" style="width:${(valueFn(c) / max) * 100}%"></div></div>
+            <div class="hbar-val">${fmt(valueFn(c))}</div>
+        </div>`).join('');
+}
+
+function typeBadge(c) {
+    return `<span class="badge b-${c.type}">${TYPES[c.type].icon} ${TYPES[c.type].label}</span>`;
+}
+
+function renderOverview() {
+    const el = document.getElementById('overview');
+    const list = state.campaigns;
+    if (!list.length) {
+        el.innerHTML = `<div class="card"><div class="empty"><h3>Nenhuma campanha com investimento</h3><p>Desmarque “Ignorar campanhas sem investimento” na aba Upload para ver todas.</p></div></div>`;
+        return;
+    }
+    const bm = BENCHMARKS[platform()];
+    const t = sumCampaigns(list);
+    const groups = TYPE_KEYS.map(k => ({ k, list: list.filter(c => c.type === k) })).filter(g => g.list.length);
+    const topSpend = [...list].sort((x, y) => y.spend - x.spend).slice(0, 8);
+    const topRoas = list.filter(c => c.type === 'ecommerce' && c.roas != null).sort((x, y) => y.roas - x.roas).slice(0, 8);
+
+    el.innerHTML = `
+        <div class="stats-grid">
+            ${statCard('Investimento', brl(t.spend), `${list.length} campanha${list.length !== 1 ? 's' : ''}`)}
+            ${statCard('Impressões', int(t.impressions), `Alcance somado: ${int(t.reach)}`)}
+            ${statCard('CTR (link)', pct(t.ctr), `${int(t.linkClicks)} cliques no link`, status(t.ctr, bm.ctr))}
+            ${statCard('CPC (link)', brl(t.cpc), '', status(t.cpc, bm.cpc))}
+            ${statCard('CPM', brl(t.cpm), '', status(t.cpm, bm.cpm))}
+        </div>
+
+        ${groups.map(g => {
+            const s = sumCampaigns(g.list, TYPES[g.k].label, g.k);
+            const a = analyze(s);
+            return `
+            <h3 class="mb-2">${TYPES[g.k].icon} ${TYPES[g.k].label} <span class="muted" style="font-size:14px;font-weight:400">(${g.list.length} campanha${g.list.length !== 1 ? 's' : ''} · ${brl(s.spend)})</span></h3>
+            <div class="stats-grid">
+                ${typeCards(s).join('')}
+                ${a.score != null ? statCard('Score', a.score + '/100', a.weakest && a.weakest.gap > 0 ? 'Gargalo: ' + a.weakest.name : '', scoreStatus(a.score)) : ''}
+            </div>
+            ${a.stages.length > 1 ? `<div class="mb-4">${renderFunnel(a, 'Funil consolidado · ' + TYPES[g.k].label)}</div>` : ''}`;
+        }).join('')}
+
+        <div class="grid-2 mb-4">
+            <div class="card"><div class="card-header"><div class="card-title">Investimento por campanha</div></div>
+                <div class="card-content">${hbars(topSpend, c => c.spend, brl0)}</div></div>
+            <div class="card"><div class="card-header"><div class="card-title">ROAS por campanha de vendas</div></div>
+                <div class="card-content">${hbars(topRoas, c => c.roas, mult)}</div></div>
+        </div>
+
+        <div class="card">
+            <div class="card-header"><div class="card-title">Resumo por objetivo</div></div>
+            <div class="table-wrap"><table>
+                <thead><tr><th>Objetivo</th><th class="num">Campanhas</th><th class="num">Investimento</th><th class="num">% do total</th><th class="num">Resultado principal</th><th class="num">Custo por resultado</th><th class="num">CTR</th></tr></thead>
+                <tbody>${groups.map(g => { const s = sumCampaigns(g.list, '', g.k); return `
+                    <tr style="cursor:default"><td>${typeBadge(s)}</td>
+                    <td class="num">${g.list.length}</td><td class="num">${brl(s.spend)}</td>
+                    <td class="num">${pct(ratePct(s.spend, t.spend), 1)}</td>
+                    <td class="num">${int(s.mainResult)} <span class="muted">${TYPES[g.k].resultLabel}</span></td><td class="num">${brl(s.costPerResult)}</td><td class="num">${pct(s.ctr)}</td></tr>`; }).join('')}
+                </tbody></table></div>
+        </div>`;
+}
+
+const TABLE_COLS = [
+    { key: 'name', label: 'Campanha' },
+    { key: 'type', label: 'Objetivo' },
+    { key: 'spend', label: 'Investimento', num: true, fmt: brl },
+    { key: 'impressions', label: 'Impressões', num: true, fmt: int },
+    { key: 'ctr', label: 'CTR', num: true, fmt: v => pct(v) },
+    { key: 'cpc', label: 'CPC', num: true, fmt: brl },
+    { key: 'mainResult', label: 'Resultado', num: true, fmt: (v, c) => v == null ? '—' : `${int(v)} <span class="muted">${TYPES[c.type].resultLabel}</span>` },
+    { key: 'costPerResult', label: 'Custo/resultado', num: true, fmt: brl },
+    { key: 'revenue', label: 'Receita', num: true, fmt: v => (v ? brl(v) : '—') },
+    { key: 'roas', label: 'ROAS', num: true, fmt: mult }
+];
+
+function typeSelect(c) {
+    return `<select class="type-select${c.typeManual ? ' manual' : ''}" data-id="${c.id}" title="${c.typeManual ? 'Ajustado manualmente · detecção automática: ' + esc(TYPES[c.autoType].label) : 'Detectado automaticamente'}">
+        ${TYPE_KEYS.map(k => `<option value="${k}"${k === c.type ? ' selected' : ''}>${TYPES[k].icon} ${TYPES[k].label}${k === c.autoType && c.typeManual ? ' (auto)' : ''}</option>`).join('')}
+    </select>`;
+}
+
+function renderTable() {
+    const q = norm(document.getElementById('f-search').value);
+    const type = document.getElementById('f-type').value;
+    const st = document.getElementById('f-status').value;
+    const { key, dir } = state.sort;
+    const rows = state.campaigns
+        .filter(c => (!q || norm(c.name).includes(q)) && (!type || c.type === type) && (!st || c.status === st))
+        .sort((a, b) => {
+            const va = key === 'type' ? TYPES[a.type].label : a[key], vb = key === 'type' ? TYPES[b.type].label : b[key];
+            if (va == null && vb == null) return 0;
+            if (va == null) return 1;
+            if (vb == null) return -1;
+            return (typeof va === 'string' ? va.localeCompare(vb, 'pt-BR') : va - vb) * dir;
+        });
+    document.getElementById('campaign-table').innerHTML = `
+        <thead><tr>${TABLE_COLS.map(c => `<th class="${c.num ? 'num' : ''}" data-sort="${c.key}">${c.label}${key === c.key ? (dir > 0 ? ' ▲' : ' ▼') : ''}</th>`).join('')}</tr></thead>
+        <tbody>${rows.length ? rows.map(c => `
+            <tr data-id="${c.id}">
+                <td class="name-cell">${esc(c.name)} <span class="badge b-${c.status}">${statusLabel(c)}</span></td>
+                <td>${typeSelect(c)}</td>
+                ${TABLE_COLS.slice(2).map(col => `<td class="num">${col.fmt(c[col.key], c)}</td>`).join('')}
+            </tr>`).join('') : `<tr><td colspan="${TABLE_COLS.length}" class="empty">Nenhuma campanha encontrada com esses filtros.</td></tr>`}
+        </tbody>`;
+}
+
+function renderFunnel(a, title) {
+    if (!a.stages.length) return '';
+    return `
+    <div class="card">
+        <div class="card-header row">
+            <div class="card-title">${esc(title)}</div>
+            <div style="font-size:13px" class="muted">${a.weakest && a.weakest.gap > 0 ? `<span class="c-poor">⚠ Gargalo: ${esc(a.weakest.name)}</span>` : '<span class="c-good">✓ Todas as etapas na média ou acima</span>'}</div>
+        </div>
+        <div class="card-content funnel">
+            ${a.stages.map(s => `
+            <div class="funnel-stage ${s.status}">
+                <div class="funnel-head">
+                    <div class="funnel-name">${esc(s.name)}</div>
+                    <div><span class="muted" style="font-size:13px">${int(s.to)} de ${int(s.from)}</span> &nbsp;<span class="funnel-rate c-${s.status}">${pct(s.rate)}</span></div>
+                </div>
+                <div class="funnel-bar"><div class="funnel-fill" style="width:${Math.min(100, (s.rate / s.benchmark.good) * 100)}%"></div></div>
+                <div class="funnel-info">
+                    <span>Benchmark: ${pct(s.benchmark.average, 1)} (médio) · ${pct(s.benchmark.good, 1)} (bom)</span>
+                    <span>${s.gap > 0 ? `<span class="c-poor">${s.gap.toFixed(0)}% abaixo do médio</span>` : `<span class="c-good">${Math.abs(s.gap).toFixed(0)}% acima do médio</span>`} · ${int(s.lost)} perdidos</span>
+                </div>
+            </div>`).join('')}
+        </div>
+    </div>`;
+}
+
+function renderAnalysis() {
+    const el = document.getElementById('analysis');
+    const c = state.campaigns.find(x => x.id === state.selectedId);
+    if (!c) { el.innerHTML = ''; return; }
+    const bm = BENCHMARKS[platform()];
+    const a = analyze(c);
+    const scoreSt = scoreStatus(a.score);
+    const scoreColor = { good: 'var(--success)', average: 'var(--gold-dark)', poor: 'var(--danger)', none: 'var(--gray)' }[scoreSt];
+
+    el.innerHTML = `
+        <div class="row mb-4">
+            <div>
+                <h2 style="font-size:22px">${esc(c.name)}</h2>
+                <p class="muted">${typeBadge(c)} ${c.typeManual ? '<span class="badge b-medium">ajustado manualmente</span>' : ''} <span class="badge b-${c.status}">${statusLabel(c)}</span> ${c.start ? `· ${fmtDate(c.start)} a ${fmtDate(c.end)}` : ''}</p>
+            </div>
+            <button class="btn btn-outline" onclick="switchTab('campaigns')">← Voltar às campanhas</button>
+        </div>
+
+        <div class="card mb-4"><div class="card-content score-wrap">
+            <div class="score-circle" style="background: conic-gradient(${scoreColor} ${(a.score || 0) * 3.6}deg, var(--gray-light) 0deg)">
+                <div class="score-value" style="color:${scoreColor}">${a.score ?? '—'}</div>
+            </div>
+            <div style="flex:1;min-width:220px">
+                <h3 style="font-size:20px;margin-bottom:.4rem">Score · ${TYPES[c.type].label}</h3>
+                <p class="muted">${a.score == null ? 'Sem dados suficientes para calcular o score.' : scoreSt === 'good' ? 'Campanha saudável: etapas próximas ou acima do benchmark.' : scoreSt === 'average' ? 'Campanha funcional, com etapas que podem melhorar.' : 'Campanha com gargalos relevantes. Comece pelas recomendações de alta prioridade.'}</p>
+                <p class="muted" style="font-size:12px;margin-top:.4rem">${c.type === 'alcance' ? 'Baseado em CPM e frequência.' : 'Média das taxas de cada etapa do funil em relação ao benchmark “bom”' + (c.type === 'ecommerce' ? ', incluindo ROAS.' : '.')}</p>
+            </div>
+        </div></div>
+
+        <h3 class="mb-2">Entrega</h3>
+        <div class="stats-grid">
+            ${statCard('Investimento', brl(c.spend))}
+            ${c.reach ? statCard('Alcance / Frequência', int(c.reach), `Frequência: ${c.frequency ? c.frequency.toFixed(2) : '—'}`, c.frequency > 3 ? 'average' : '') : ''}
+            ${statCard('Impressões', int(c.impressions), `CPM: ${brl(c.cpm)}`, status(c.cpm, bm.cpm))}
+            ${c.type !== 'alcance' ? statCard('CTR (link)', pct(c.ctr), `${int(c.linkClicks)} cliques`, status(c.ctr, bm.ctr)) : ''}
+            ${c.type !== 'alcance' ? statCard('CPC (link)', brl(c.cpc), '', status(c.cpc, bm.cpc)) : ''}
+        </div>
+
+        <h3 class="mb-2">${TYPES[c.type].icon} Resultados de ${TYPES[c.type].label}</h3>
+        <div class="stats-grid">${typeCards(c).join('')}</div>
+
+        <div class="mb-4">${renderFunnel(a, 'Funil · ' + TYPES[c.type].label)}</div>
+
+        <div class="card">
+            <div class="card-header"><div class="card-title">⚡ Recomendações baseadas nos dados</div></div>
+            <div class="card-content">
+                ${a.recs.length ? a.recs.map(r => `
+                <div class="rec">
+                    <div class="rec-head" onclick="this.parentElement.classList.toggle('open')">
+                        <div style="flex:1">
+                            <div class="rec-title">${esc(r.title)} <span class="badge b-${r.priority}">${r.priority === 'high' ? 'Alta' : 'Média'}</span> <span class="muted" style="font-size:12px;font-family:Manrope">${r.area}</span></div>
+                            <div class="rec-desc">${esc(r.desc)}</div>
+                        </div>
+                        <span class="muted">▼</span>
+                    </div>
+                    <div class="rec-body">
+                        <h4>📊 Evidência</h4><div class="rec-evidence">${esc(r.evidence)}</div>
+                        ${r.impact ? `<h4>📈 Impacto esperado</h4><p>${esc(r.impact)}</p>` : ''}
+                        <h4>📋 Ações</h4><ol>${r.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>
+                    </div>
+                </div>`).join('') : `<div class="empty"><div style="font-size:40px">✅</div><p class="c-good" style="font-weight:700">Nenhuma etapa abaixo do benchmark.</p></div>`}
+            </div>
+        </div>`;
+}
+
+// ---------- Navegação e eventos ----------
+function switchTab(tab) {
+    const btn = document.querySelector(`[data-tab="${tab}"]`);
+    if (!btn || btn.disabled) return;
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.toggle('active', t === btn));
+    document.querySelectorAll('.tab-content').forEach(s => s.classList.toggle('active', s.id === tab));
+    window.scrollTo({ top: 0 });
+}
+
+function openAnalysis(id) {
+    state.selectedId = id;
+    document.querySelector('[data-tab="analysis"]').disabled = false;
+    renderAnalysis();
+    switchTab('analysis');
+}
+
+let toastTimer;
+function toast(msg, isError = false) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (isError ? ' error' : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.className = 'toast', 3000);
+}
+
+document.querySelectorAll('.nav-tab').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
+document.getElementById('f-type').insertAdjacentHTML('beforeend', TYPE_KEYS.map(k => `<option value="${k}">${TYPES[k].label}</option>`).join(''));
+
+const dz = document.getElementById('dropzone');
+const fileInput = document.getElementById('file-input');
+dz.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => { handleFile(e.target.files[0]); e.target.value = ''; });
+['dragenter', 'dragover'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('drag'); }));
+// dragleave também dispara ao passar sobre elementos filhos; só tira o destaque ao sair da área
+dz.addEventListener('dragleave', e => { if (!dz.contains(e.relatedTarget)) dz.classList.remove('drag'); });
+dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag'); handleFile(e.dataTransfer.files[0]); });
+
+document.getElementById('opt-hide-zero').addEventListener('change', applyFilterOption);
+document.getElementById('opt-platform').addEventListener('change', () => { state.platformChosen = true; renderAll(); });
+['f-search', 'f-type', 'f-status'].forEach(id => document.getElementById(id).addEventListener('input', renderTable));
+
+const table = document.getElementById('campaign-table');
+table.addEventListener('change', e => {
+    const sel = e.target.closest('.type-select');
+    if (sel) setType(sel.dataset.id, sel.value);
+});
+table.addEventListener('click', e => {
+    if (e.target.closest('.type-select')) return;
+    const th = e.target.closest('th[data-sort]');
+    if (th) {
+        const k = th.dataset.sort;
+        state.sort = { key: k, dir: state.sort.key === k ? -state.sort.dir : (k === 'name' || k === 'type' ? 1 : -1) };
+        return renderTable();
+    }
+    const tr = e.target.closest('tr[data-id]');
+    if (tr) openAnalysis(tr.dataset.id);
+});
+</script>
+</body>
+</html>

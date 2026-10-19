@@ -1,0 +1,9 @@
+# Relatórios de clientes: nunca versionar
+*.csv
+*.tsv
+
+# Versões antigas e material de referência
+Grupo-Galpao-Analytics.html
+Grupo-Galpao-Analytics.old.html
+Site_Parte_*.png
+Logo GG Tipo.svg

@@ -1,0 +1,62 @@
+# Publica os dois ambientes num único GitHub Pages:
+#   prod = branch main -> https://<org>.github.io/<repo>/
+#   dev  = branch dev  -> https://<org>.github.io/<repo>/dev/
+name: Deploy Pages
+
+on:
+  push:
+    branches: [main, dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main (prod)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: prod
+
+      - name: Checkout dev
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+          path: dev
+        continue-on-error: true
+
+      - name: Montar site
+        run: |
+          mkdir -p _site/dev
+          cp prod/Grupo-Galpao-Analytics-v2.html _site/index.html
+          cp prod/Logo01-SLight.svg _site/
+          if [ -f dev/Grupo-Galpao-Analytics-v2.html ]; then
+            cp dev/Grupo-Galpao-Analytics-v2.html _site/dev/index.html
+            cp dev/Logo01-SLight.svg _site/dev/
+            # Marca visual para não confundir dev com prod
+            sed -i 's|<title>Grupo Galpão Analytics</title>|<title>[DEV] Grupo Galpão Analytics</title>|' _site/dev/index.html
+          fi
+          touch _site/.nojekyll
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
