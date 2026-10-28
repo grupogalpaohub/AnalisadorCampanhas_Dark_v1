@@ -18,7 +18,7 @@ O deploy é automático (GitHub Actions, `.github/workflows/pages.yml`) a cada p
 
 ## Arquivos
 
-- `Grupo-Galpao-Analytics-v2.html`: o app (publicado como `index.html`).
+- `Grupo-Galpao-Analytics-v3.html`: o app (publicado como `index.html`); `Grupo-Galpao-Analytics-v2.html` fica como versão anterior.
 - `Logo01-SLight.svg`: logo usado no topo.
 
 CSVs de clientes ficam fora do repositório (`.gitignore`).

@@ -37,13 +37,13 @@ jobs:
       - name: Montar site
         run: |
           mkdir -p _site/dev
-          cp prod/Grupo-Galpao-Analytics-v2.html _site/index.html
+          cp prod/Grupo-Galpao-Analytics-v3.html _site/index.html
           cp prod/Logo01-SLight.svg _site/
-          if [ -f dev/Grupo-Galpao-Analytics-v2.html ]; then
-            cp dev/Grupo-Galpao-Analytics-v2.html _site/dev/index.html
+          if [ -f dev/Grupo-Galpao-Analytics-v3.html ]; then
+            cp dev/Grupo-Galpao-Analytics-v3.html _site/dev/index.html
             cp dev/Logo01-SLight.svg _site/dev/
             # Marca visual para não confundir dev com prod
-            sed -i 's|<title>Grupo Galpão Analytics</title>|<title>[DEV] Grupo Galpão Analytics</title>|' _site/dev/index.html
+            sed -i 's|<title>Grupo Galpão Analytics V3</title>|<title>[DEV] Grupo Galpão Analytics V3</title>|' _site/dev/index.html
           fi
           touch _site/.nojekyll
 
