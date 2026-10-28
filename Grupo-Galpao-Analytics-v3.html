@@ -1135,7 +1135,7 @@ function gerarDestaques(comp, { metas = [], funis = null } = {}) {
     const piores = Object.values(funis).filter(f => f.piorou).map(f => ({ f, v: f.piorou.etapa.varPP })).sort((a, b) => a.v - b.v);
     if (piores.length) {
         const { f } = piores[0], e = f.piorou.etapa, d = f.piorou.de;
-        out.push({ regra: 'funil', id: 'funil-' + f.tipo, texto: `No funil de ${TYPES[f.tipo].label}, a passagem de quem ${d.rotulo} para quem ${e.rotulo} piorou ${ppTxt(e.varPP)}: de ${pct(e.taxaBase, 1)} para ${pct(e.taxa, 1)}.` });
+        out.push({ regra: 'funil', id: 'funil-' + f.tipo, texto: `No Funil de ${TYPES[f.tipo].label}, a passagem de quem ${d.rotulo} para quem ${e.rotulo} piorou ${ppTxt(e.varPP)}: de ${pct(e.taxaBase, 1)} para ${pct(e.taxa, 1)}.` });
     }
     return out;
 }
@@ -1768,7 +1768,7 @@ function paginaRosca(m) {
   <p class="lede">Como o investimento de ${esc(faixaTexto(A.start, A.end))} se dividiu entre os Objetivos das campanhas, com os números técnicos de cada um.</p>
   <div class="donut-wrap">${rosca(fatias, brl0(A.total.spend))}<div class="donut-leg">${leg}</div></div>
   <div class="panel"><h3>Números técnicos por Objetivo <small>${esc(plataformaTxt(m))}</small></h3>
-    <table class="tbl-full"><thead><tr><th>Objetivo</th><th>Investimento</th><th>CPM</th><th>CTR</th><th>Frequência</th><th>Resultado</th><th>Custo por resultado</th></tr></thead><tbody>${linhas}</tbody></table>
+    <table class="tbl-full"><thead><tr><th>Objetivo</th><th>Investimento</th><th>CPM</th><th>CTR</th><th>Frequência</th><th>Resultado</th><th>Custo por Resultado</th></tr></thead><tbody>${linhas}</tbody></table>
     <p class="lede" style="margin-top:3mm;font-size:8pt">Frequência só aparece quando o Objetivo tem uma campanha: o alcance de campanhas diferentes não se soma.</p></div>
   ${foot('Relatório do Gestor · Investimento por Objetivo')}
 </section>`;
