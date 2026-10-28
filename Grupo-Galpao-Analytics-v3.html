@@ -192,6 +192,28 @@ tbody tr:hover { background: rgba(69,189,254,.08); }
 .type-select.manual { border-color: var(--gold); color: var(--gold); }
 .type-select:focus { outline: none; border-color: var(--megaman); }td.num { white-space: nowrap; }
 
+/* Comparativo */
+.cmp-bar { display: grid; grid-template-columns: 1fr 1fr auto; gap: 1rem; align-items: end; }
+.cmp-bar label { display: grid; gap: .3rem; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+.cmp-bar select { text-transform: none; letter-spacing: 0; font-size: 14px; width: 100%; }
+.cmp-actions { display: flex; gap: .6rem; flex-wrap: wrap; }
+.cmp-resumo { grid-column: 1 / -1; font-size: 13px; }
+.cmp-resumo strong { color: var(--desert); }
+.var { font-size: 12px; font-weight: 700; white-space: nowrap; }
+.var abbr { text-decoration: none; font-weight: 500; opacity: .8; }
+.cmp-table th { cursor: default; }
+.cmp-table th.sel { color: var(--gold); }
+.cmp-table td .badge { margin-left: .3rem; }
+.cmp-avisos { border: 1px solid rgba(230,195,100,.5); background: rgba(230,195,100,.08); border-radius: 12px; padding: .7rem 1.1rem; font-size: 13px; }
+.cmp-avisos summary { cursor: pointer; font-weight: 700; color: var(--gold); }
+.cmp-warn { margin-top: .5rem; color: var(--desert); }
+.metas-chips { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: .8rem; }
+.meta-chip { display: grid; gap: .15rem; padding: .8rem 1rem; border-radius: 12px; border: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+.meta-chip strong { color: var(--desert); font: 700 15px 'Ubuntu'; }
+.meta-chip.ok { border-color: rgba(92,229,96,.5); } .meta-chip.ok span:last-child { color: var(--success); font-weight: 700; }
+.meta-chip.no { border-color: rgba(255,107,107,.55); } .meta-chip.no span:last-child { color: var(--danger); font-weight: 700; }
+@media (max-width: 768px) { .cmp-bar { grid-template-columns: 1fr; } }
+
 /* Perfil do Cliente */
 .form-grid { display: grid; gap: .9rem; }
 .form-grid label, .meta-row label { display: grid; gap: .3rem; font-size: 13px; font-weight: 600; color: var(--muted); }
@@ -227,6 +249,7 @@ input[type=text]:focus, select:focus { outline: none; border-color: var(--megama
         <button class="nav-tab" data-tab="overview" disabled>📊 Visão Geral</button>
         <button class="nav-tab" data-tab="campaigns" disabled>📋 Campanhas <span id="campaign-count"></span></button>
         <button class="nav-tab" data-tab="analysis" disabled>📈 Análise</button>
+        <button class="nav-tab" data-tab="comparativo" disabled>🔀 Comparativo</button>
         <button class="nav-tab" data-tab="cliente">👤 Cliente</button>
     </nav>
 
@@ -284,6 +307,9 @@ input[type=text]:focus, select:focus { outline: none; border-color: var(--megama
 
     <!-- Analysis -->
     <section id="analysis" class="tab-content"></section>
+
+    <!-- Comparativo entre Períodos -->
+    <section id="comparativo" class="tab-content"></section>
 
     <!-- Perfil do Cliente -->
     <section id="cliente" class="tab-content"></section>
@@ -1363,6 +1389,7 @@ function loadLote(sources, restored = false) {
     const lote = assembleLote(periods);
     if (lote.error) return uploadError(lote.error);
     state.lote = lote;
+    iniciarComparativo();
     if (!state.platformChosen) document.getElementById('opt-platform').value = lote.platform;
     if (!restored) saveLote(lote);
     showPeriod(lote.periods.length - 1, true);
@@ -1412,7 +1439,7 @@ function showPeriod(i, announce = false) {
     renderCliente();
     if (announce) {
         toast(lote.periods.length > 1 ? `Lote carregado: ${lote.periods.length} Períodos` : 'CSV carregado!');
-        switchTab(state.campaigns.length ? 'overview' : 'upload');
+        switchTab(state.cmp ? 'comparativo' : state.campaigns.length ? 'overview' : 'upload');
     }
 }
 
@@ -1447,6 +1474,7 @@ function renderAll() {
     renderOverview();
     renderTable();
     if (state.selectedId) renderAnalysis();
+    if (state.lote && state.cmp) renderComparativo();
 }
 
 function statCard(label, value, sub = '', st = '') {
@@ -1862,8 +1890,140 @@ clienteEl.addEventListener('click', e => {
 });
 
 
-function renderComparativo() { /* aba Comparativo: ticket #6 */ }
 renderCliente();
+// ---------- Aba Comparativo ----------
+// Seleção atual: índices em state.lote.periods. Reiniciada quando um novo Lote é carregado.
+function iniciarComparativo() {
+    const ps = state.lote ? state.lote.periods : [];
+    const sug = sugerirComparacao(ps);
+    state.cmp = sug ? { analisado: sug.analisado, comparacao: sug.comparacao, sugestao: sug } : null;
+    const tab = document.querySelector('[data-tab="comparativo"]');
+    tab.disabled = !sug;
+    if (!sug && tab.classList.contains('active')) switchTab('upload');
+}
+function dadosComparativo() {
+    const ps = state.lote.periods;
+    const o = { overrides: ajustesAtuais(), ignorarZero: document.getElementById('opt-hide-zero').checked, faturamento: perfilAtual().faturamento };
+    state.comp = compararPeriodos(ps, { analisado: state.cmp.analisado, comparacao: state.cmp.comparacao, ...o });
+    state.evo = evolucao(ps, o);
+    state.metasAval = avaliarMetas(perfilAtual().metas, state.comp);
+    return state.comp;
+}
+
+function varChip(v) {
+    if (!v || v.dir == null) return '';
+    if (v.dir === 'flat') return '<span class="var muted">= estável</span>';
+    const txt = v.pp != null ? `${fmtNum(Math.abs(v.pp), 1)} p.p.` : v.pct != null ? `${pctCurto(v.pct)}%` : '';
+    const cls = v.bom == null ? 'muted' : v.bom ? 'c-good' : 'c-poor';
+    return `<span class="var ${cls}">${v.dir === 'up' ? '▲' : '▼'} ${txt}${v.porDia ? ' <abbr title="Períodos de durações diferentes: comparado por dia">/dia</abbr>' : ''}</span>`;
+}
+const estadoBadge = c => c.estado === 'nova' ? '<span class="badge b-active">nova</span>' : c.estado === 'encerrada' ? '<span class="badge b-high">encerrada</span>'
+    : c.ciclo.nova && c.ciclo.encerrada ? '<span class="badge b-medium">nova e encerrada</span>' : c.ciclo.nova ? '<span class="badge b-active">nova no Lote</span>' : c.ciclo.encerrada ? '<span class="badge b-medium">encerrada no Lote</span>' : '';
+
+// Barras do Investimento (ou outra métrica de volume) por Período do Lote
+function barrasEvolucao(serie, fmt, destaque) {
+    const pts = serie.pontos, max = Math.max(...pts.map(p => p.valor || 0), 0);
+    if (!pts.length || max <= 0) return '<p class="muted">Sem dados.</p>';
+    const W = 560, H = 150, base = 118, bw = Math.min(70, (W - 40) / pts.length - 16);
+    return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Evolução por Período">
+        <line x1="10" x2="${W - 10}" y1="${base}" y2="${base}" stroke="rgba(255,250,243,.18)"/>
+        ${pts.map((p, i) => {
+            const cx = 20 + (i + .5) * ((W - 40) / pts.length), h = p.valor ? Math.max(3, (p.valor / max) * 84) : 0;
+            return `<rect x="${cx - bw / 2}" y="${base - h}" width="${bw}" height="${h}" rx="6" fill="${destaque.includes(p.indice) ? '#45BDFE' : '#0D6DA0'}"/>
+                <text x="${cx}" y="${base - h - 6}" text-anchor="middle" font-family="Ubuntu" font-weight="700" font-size="12" fill="#FFFAF3">${p.valor == null ? '—' : fmt(p.valor)}</text>
+                <text x="${cx}" y="${base + 16}" text-anchor="middle" font-family="Manrope" font-size="11" fill="#9DB4C4">${esc(p.rotulo)}</text>
+                <text x="${cx}" y="${base + 30}" text-anchor="middle" font-family="Manrope" font-size="10" fill="#9DB4C4">${p.dias} dias</text>`;
+        }).join('')}</svg>`;
+}
+
+function renderComparativo() {
+    const el = document.getElementById('comparativo');
+    if (!state.lote || !state.cmp) { el.innerHTML = ''; return; }
+    const ps = state.lote.periods, c = dadosComparativo(), A = c.analisado, B = c.comparacao;
+    const todos = ps.map((_, i) => i);
+    const igual = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
+    const selA = igual(state.cmp.analisado, todos) && ps.length > 1 ? 'all' : String(state.cmp.analisado[0]);
+    const nomeSel = i => `${rotuloPeriodo(ps[i])} · ${ps[i].fileName}`;
+    const sobrepoe = B && state.cmp.analisado.some(i => state.cmp.comparacao.includes(i));
+    const sug = state.cmp.sugestao;
+    const usandoSug = sug && igual(state.cmp.analisado, sug.analisado) && igual(state.cmp.comparacao, sug.comparacao);
+    const fat = A.faturamento;
+    const objComRes = c.objetivos.filter(o => o.atual);
+
+    el.innerHTML = `
+    ${state.lote.warnings.length ? `<details class="mb-2 cmp-avisos"><summary>⚠ ${state.lote.warnings.length} aviso${state.lote.warnings.length !== 1 ? 's' : ''} sobre o Lote</summary>${state.lote.warnings.map(w => `<div class="cmp-warn">${esc(w.text)}</div>`).join('')}</details>` : ''}
+    <div class="card mb-4"><div class="card-content cmp-bar">
+        <label>Período analisado<select id="cmp-a">${ps.length > 2 ? `<option value="all"${selA === 'all' ? ' selected' : ''}>Todos os Períodos juntos</option>` : ''}${ps.map((_, i) => `<option value="${i}"${selA === String(i) ? ' selected' : ''}>${esc(nomeSel(i))}</option>`).join('')}</select></label>
+        <label>Período de comparação<select id="cmp-b"><option value="-"${!B ? ' selected' : ''}>Sem comparação</option>${ps.map((_, i) => `<option value="${i}"${B && state.cmp.comparacao.length === 1 && state.cmp.comparacao[0] === i ? ' selected' : ''}>${esc(nomeSel(i))}</option>`).join('')}</select></label>
+        <div class="cmp-actions">
+            ${sug && !usandoSug ? `<button class="btn btn-sm btn-outline" id="cmp-sug">Usar ${sug.motivo === 'mes' ? 'mês atual × mês anterior' : 'último × anterior'}</button>` : ''}
+            <button class="btn btn-primary" id="cmp-relatorio">📄 Gerar relatório</button>
+        </div>
+        <p class="muted cmp-resumo">Analisando <strong>${faixaTexto(A.start, A.end)}</strong> (${A.dias} dias)${B ? ` contra <strong>${faixaTexto(B.start, B.end)}</strong> (${B.dias} dias)${c.dias.porDia ? ' · durações diferentes: volumes comparados por dia' : ''}` : ''} · Perfil: <strong>${esc(perfilAtual().nome)}</strong></p>
+        ${sobrepoe ? '<div class="alert alert-warning" style="grid-column:1/-1">⚠ Os Períodos analisado e de comparação têm dias em comum.</div>' : ''}
+    </div></div>
+
+    <div class="stats-grid">
+        ${statCard('Investimento', brl(A.total.spend), `${A.total.nCampanhas} campanha${A.total.nCampanhas !== 1 ? 's' : ''} ${varChip(c.total.spend)}`)}
+        ${fat != null ? statCard('Faturamento informado', brl(fat), `ROAS do total: ${mult(A.total.roas)} ${varChip(c.total.roas)}`) : statCard('Faturamento', '—', 'Informe na aba Cliente para ver o ROAS do total')}
+        ${statCard('Impressões', int(A.total.impressions), varChip(c.total.impressions))}
+        ${statCard('CTR (link)', pct(A.total.ctr), varChip(c.total.ctr))}
+        ${statCard('CPM', brl(A.total.cpm), varChip(c.total.cpm))}
+    </div>
+
+    ${state.metasAval.length ? `<div class="card mb-4"><div class="card-header"><div class="card-title">Metas do Perfil</div></div><div class="card-content metas-chips">
+        ${state.metasAval.map(m => `<div class="meta-chip ${m.atingida ? 'ok' : 'no'}"><strong>${esc(m.nome)}</strong><span>${esc(m.valorTxt)} · ${esc(m.metaTxt)}</span><span>${m.atingida ? '✓ atingida' : '✕ não atingida'} · ${esc(m.leitura)}</span></div>`).join('')}</div></div>` : ''}
+
+    <div class="grid-2 mb-4">
+        <div class="card"><div class="card-header"><div class="card-title">Investimento por Período ${state.evo.misto ? '<span class="muted" style="font-size:12px;font-weight:400">· por dia (durações diferentes)</span>' : ''}</div></div>
+            <div class="card-content">${barrasEvolucao(serieEvolucao(state.evo, 'total', 'spend'), v => (serieEvolucao(state.evo, 'total', 'spend').porDia ? brl0(v) + '/dia' : brl0(v)), [...state.cmp.analisado])}</div></div>
+        ${objComRes.slice(0, 1).map(o => { const s = serieEvolucao(state.evo, o.tipo, 'mainResult'); return `
+        <div class="card"><div class="card-header"><div class="card-title">${TYPES[o.tipo].icon} ${esc(o.label)}: ${esc(RESULTADO_TXT[o.tipo].plur)} por Período ${s.porDia ? '<span class="muted" style="font-size:12px;font-weight:400">· por dia</span>' : ''}</div></div>
+            <div class="card-content">${barrasEvolucao(s, v => (s.porDia ? fmtNum(v, 1) : int(v)), [...state.cmp.analisado])}</div></div>`; }).join('')}
+    </div>
+
+    <div class="card mb-4"><div class="card-header"><div class="card-title">Evolução por Objetivo</div></div>
+        <div class="table-wrap"><table class="cmp-table">
+            <thead><tr><th>Objetivo</th><th>Métrica</th>${ps.map((p, i) => `<th class="num${state.cmp.analisado.includes(i) ? ' sel' : ''}">${esc(rotuloPeriodo(p))}</th>`).join('')}</tr></thead>
+            <tbody>${[...new Set(state.evo.periodos.flatMap(p => Object.keys(p.porObjetivo)))].map(tipo => {
+                const linha = (key, label, fmt) => { const s = serieEvolucao(state.evo, tipo, key); return `<tr style="cursor:default"><td>${key === 'spend' ? typeBadge({ type: tipo }) : ''}</td><td>${label}${s.porDia ? ' <span class="muted">/dia</span>' : ''}</td>${s.pontos.map(p => `<td class="num">${p.valor == null ? '—' : fmt(p.valor, s.porDia)}</td>`).join('')}</tr>`; };
+                return linha('spend', 'Investimento', (v, d) => d ? brl(v) : brl0(v)) + linha('mainResult', cap(RESULTADO_TXT[tipo].plur), (v, d) => d ? fmtNum(v, 1) : int(v)) + linha('costPerResult', cap(RESULTADO_TXT[tipo].custo), brl);
+            }).join('')}</tbody></table></div></div>
+
+    <div class="card mb-4"><div class="card-header"><div class="card-title">Por Objetivo</div></div>
+        <div class="table-wrap"><table class="cmp-table">
+            <thead><tr><th>Objetivo</th><th class="num">Investimento</th><th class="num">Resultado</th><th class="num">Custo por Resultado</th><th class="num">CTR</th><th class="num">ROAS</th></tr></thead>
+            <tbody>${c.objetivos.map(o => { const a = o.atual; return `<tr style="cursor:default"><td>${typeBadge({ type: o.tipo })}<div class="muted" style="font-size:12px">${a ? a.nCampanhas + ' campanha' + (a.nCampanhas !== 1 ? 's' : '') + ' · ' + pct(o.participacao, 1) + ' do investimento' : 'só no Período de comparação'}</div></td>
+                <td class="num">${a ? brl(a.spend) : '—'}<div>${varChip(o.var.spend)}</div></td>
+                <td class="num">${a ? int(a.mainResult) + ' <span class="muted">' + esc(RESULTADO_TXT[o.tipo].plur) + '</span>' : '—'}<div>${varChip(o.var.mainResult)}</div></td>
+                <td class="num">${a ? brl(a.costPerResult) : '—'}<div>${varChip(o.var.costPerResult)}</div></td>
+                <td class="num">${a ? pct(a.ctr) : '—'}<div>${varChip(o.var.ctr)}</div></td>
+                <td class="num">${a ? mult(a.roas) : '—'}<div>${varChip(o.var.roas)}</div></td></tr>`; }).join('')}</tbody></table></div></div>
+
+    <div class="card"><div class="card-header"><div class="card-title">Por Campanha <span class="muted" style="font-size:12px;font-weight:400">(pelo nome exato)</span></div></div>
+        <div class="table-wrap"><table class="cmp-table">
+            <thead><tr><th>Campanha</th><th>Objetivo</th><th class="num">Investimento</th><th class="num">Resultado</th><th class="num">Custo por Resultado</th></tr></thead>
+            <tbody>${c.campanhas.map(k => { const a = k.atual; return `<tr style="cursor:default"><td class="name-cell">${esc(k.nome)} ${estadoBadge(k)}</td><td>${typeBadge({ type: k.tipo })}</td>
+                <td class="num">${a ? brl(a.spend) : '—'}<div>${varChip(k.var.spend)}${k.estado === 'encerrada' ? `<span class="muted">antes: ${brl(k.base.spend)}</span>` : ''}</div></td>
+                <td class="num">${a ? int(a.mainResult) : '—'}<div>${varChip(k.var.mainResult)}</div></td>
+                <td class="num">${a ? brl(a.costPerResult) : '—'}<div>${varChip(k.var.costPerResult)}</div></td></tr>`; }).join('')}</tbody></table></div></div>`;
+}
+
+document.getElementById('comparativo').addEventListener('change', e => {
+    const t = e.target;
+    if (t.id === 'cmp-a') state.cmp.analisado = t.value === 'all' ? state.lote.periods.map((_, i) => i) : [+t.value];
+    else if (t.id === 'cmp-b') state.cmp.comparacao = t.value === '-' ? [] : [+t.value];
+    else return;
+    renderComparativo();
+});
+document.getElementById('comparativo').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    if (b.id === 'cmp-sug') { state.cmp.analisado = [...state.cmp.sugestao.analisado]; state.cmp.comparacao = [...state.cmp.sugestao.comparacao]; renderComparativo(); }
+    else if (b.id === 'cmp-relatorio') abrirRelatorio();
+});
+function abrirRelatorio() { toast('O Relatório chega no próximo passo.'); }
+iniciarComparativo();
 renderRestore();
 </script>
 </body>
