@@ -224,7 +224,7 @@ tbody tr:hover { background: rgba(69,189,254,.08); }
         </div>
         <div class="card">
             <div class="card-content">
-                <input type="file" id="file-input" accept=".csv,text/csv" multiple hidden>
+                <input type="file" id="file-input" accept=".csv,text/csv" hidden>
                 <div class="dropzone" id="dropzone">
                     <div class="dropzone-icon">📄</div>
                     <h3>Arraste o CSV aqui ou clique para escolher</h3>
@@ -239,7 +239,6 @@ tbody tr:hover { background: rgba(69,189,254,.08); }
                         </select>
                     </label>
                 </div>
-                <div id="lote-restore"></div>
                 <div id="upload-msg"></div>
             </div>
         </div>
@@ -303,7 +302,6 @@ const BENCHMARKS = {
     }
 };
 
-// #testavel:inicio (os testes em tests/ extraem estes trechos deste HTML)
 // Cabeçalhos do CSV da Meta (normalizados) -> campo interno
 const COLUMN_MAP = {
     // Cada lista aceita o nome da Meta e, depois, o equivalente do Google Ads
@@ -332,7 +330,6 @@ const COLUMN_MAP = {
     thruplays: ['thruplays', 'reproducoes do video ate 75%', 'thruplay'],
     videoPlays: ['reproducoes do video', 'video plays', 'visualizacoes de video de 3 segundos', '3-second video plays']
 };
-// #testavel:fim
 
 // ---------- Tipos de campanha ----------
 // Cada tipo define: como é detectado, qual é o resultado principal e o funil próprio.
@@ -398,12 +395,10 @@ function classifyByName(rawName) {
     return 'outro';
 }
 
-let state = { lote: null, periodIndex: 0, fileName: '', allRows: [], campaigns: [], selectedId: null, sort: { key: 'spend', dir: -1 } };
+let state = { fileName: '', allRows: [], campaigns: [], selectedId: null, sort: { key: 'spend', dir: -1 } };
 
 // ---------- Utilidades ----------
-// #testavel:inicio
 const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/^﻿/, '').trim().toLowerCase();
-// #testavel:fim
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const div = (a, b) => (b > 0 ? a / b : null);
 const ratePct = (a, b) => (b > 0 ? (a / b) * 100 : null);
@@ -415,7 +410,6 @@ const mult = v => v == null ? '—' : v.toLocaleString('pt-BR', { minimumFractio
 const statusLabel = c => (c.status === 'active' ? 'Ativa' : 'Inativa');
 const scoreStatus = s => (s == null ? 'none' : s >= 80 ? 'good' : s >= 60 ? 'average' : 'poor');
 
-// #testavel:inicio
 // Exportação em ";" (pt-BR) usa vírgula decimal e ponto de milhar; em "," usa ponto decimal
 let decimalComma = false;
 
@@ -481,79 +475,6 @@ function resolveColumns(header) {
     }
     return idx;
 }
-
-// ---------- Lote: um CSV = um Período ----------
-const MESES = { janeiro: 1, jan: 1, january: 1, fevereiro: 2, fev: 2, feb: 2, february: 2, marco: 3, mar: 3, march: 3, abril: 4, abr: 4, apr: 4, april: 4, maio: 5, mai: 5, may: 5, junho: 6, jun: 6, june: 6, julho: 7, jul: 7, july: 7, agosto: 8, ago: 8, aug: 8, august: 8, setembro: 9, set: 9, sep: 9, sept: 9, september: 9, outubro: 10, out: 10, oct: 10, october: 10, novembro: 11, nov: 11, november: 11, dezembro: 12, dez: 12, dec: 12, december: 12 };
-const iso = (y, m, d) => `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-const dayNum = s => Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10)) / 86400000;
-
-// Acha as datas de um texto ("1 de outubro de 2026 - 19 de outubro de 2026", "Oct 1, 2026 - Oct 19, 2026", "2026-10-01") e devolve a primeira e a última
-function parseDateRange(text) {
-    const re = /(\d{4})-(\d{2})-(\d{2})|(\d{1,2})\s+de\s+([a-zç]+)\.?\s+de\s+(\d{4})|([a-z]+)\.?\s+(\d{1,2}),?\s+(\d{4})/gi;
-    const found = [];
-    for (const m of norm(text).matchAll(re)) {
-        if (m[1]) found.push(iso(m[1], m[2], m[3]));
-        else if (m[4] && MESES[m[5]]) found.push(iso(m[6], MESES[m[5]], m[4]));
-        else if (m[7] && MESES[m[7]]) found.push(iso(m[9], MESES[m[7]], m[8]));
-    }
-    return found.length ? { start: found[0], end: found[found.length - 1] } : null;
-}
-
-// Lê um CSV (já decodificado) e devolve o Período: plataforma, datas e as linhas de campanha ainda cruas.
-// Lança Error com mensagem em português quando o arquivo não serve.
-function parseReport(text) {
-    const rows = parseCSV(text);
-    if (rows.length < 2) throw new Error('arquivo vazio ou sem linhas de dados.');
-    // O cabeçalho é a primeira linha que tem nome da campanha e investimento (o Google Ads põe título e período antes)
-    const headerAt = rows.slice(0, 15).findIndex(r => { const ix = resolveColumns(r); return ix.name > -1 && ix.spend > -1; });
-    const idx = resolveColumns(rows[Math.max(0, headerAt)]);
-    const missing = ['name', 'spend', 'impressions'].filter(k => idx[k] === -1);
-    if (missing.length) throw new Error('colunas obrigatórias não encontradas: ' + missing.map(k => COLUMN_MAP[k][0]).join(', ') + '.');
-    // Linhas de total do Google Ads ("Total: Conta", "Total: Pesquisa"…) não são campanhas
-    const dataRows = rows.slice(headerAt + 1).filter(r => !r.some(f => /^total:/.test(norm(f))));
-    const platform = idx.googleType > -1 ? 'google' : 'meta';
-    let start = null, end = null;
-    if (idx.start > -1 && idx.end > -1) {
-        // Meta: as datas estão em cada linha; vale o intervalo que cobre todas
-        const starts = dataRows.map(r => (r[idx.start] || '').trim()).filter(Boolean).sort();
-        const ends = dataRows.map(r => (r[idx.end] || '').trim()).filter(Boolean).sort();
-        if (starts.length && ends.length) { start = parseDateRange(starts[0])?.start || null; end = parseDateRange(ends[ends.length - 1])?.end || null; }
-    } else {
-        // Google: o período vem numa linha de título antes do cabeçalho
-        const r = parseDateRange(rows.slice(0, Math.max(0, headerAt)).map(x => x.join(' ')).join(' '));
-        if (r) { start = r.start; end = r.end; }
-    }
-    if (!start || !end) throw new Error('não encontrei as datas do período (Reporting starts/ends ou a linha de período do Google Ads).');
-    if (start > end) [start, end] = [end, start];
-    return { platform, start, end, idx, dataRows, decimalComma, campaignNames: [...new Set(dataRows.map(r => (r[idx.name] || '').trim()).filter(Boolean))] };
-}
-
-// Monta o Lote: ordena os Períodos pelas datas e levanta erro (plataformas misturadas) ou avisos (sobreposição, lacuna, Cliente possivelmente diferente)
-// períodos: [{ fileName, platform, start, end, campaignNames }]
-function assembleLote(periods) {
-    if (!periods.length) return { error: 'nenhum arquivo para montar o Lote.', periods: [], warnings: [] };
-    const platforms = [...new Set(periods.map(p => p.platform))];
-    if (platforms.length > 1) {
-        const label = p => (p === 'google' ? 'Google Ads' : 'Meta Ads');
-        const by = platforms.map(pl => `${label(pl)}: ${periods.filter(p => p.platform === pl).map(p => p.fileName).join(', ')}`).join(' · ');
-        return { error: `Um Lote aceita uma plataforma só, e estes arquivos misturam Meta Ads e Google Ads (${by}). Suba cada plataforma em um Lote separado.`, periods: [], warnings: [] };
-    }
-    const sorted = [...periods].sort((a, b) => a.start.localeCompare(b.start) || a.end.localeCompare(b.end) || a.fileName.localeCompare(b.fileName));
-    const warnings = [];
-    for (let i = 1; i < sorted.length; i++) {
-        const a = sorted[i - 1], b = sorted[i];
-        if (b.start <= a.end) warnings.push({ type: 'overlap', text: `Sobreposição: ${a.fileName} (${a.start} a ${a.end}) e ${b.fileName} (${b.start} a ${b.end}) cobrem dias em comum.` });
-        else if (dayNum(b.start) - dayNum(a.end) > 1) warnings.push({ type: 'gap', text: `Lacuna: entre ${a.end} e ${b.start} não há dados (${a.fileName} → ${b.fileName}).` });
-    }
-    if (sorted.length > 1) {
-        for (const p of sorted) {
-            const shared = sorted.some(o => o !== p && o.campaignNames.some(n => p.campaignNames.includes(n)));
-            if (!shared) warnings.push({ type: 'client', text: `Possível Cliente diferente: nenhuma Campanha de ${p.fileName} tem o mesmo nome de uma Campanha dos outros Períodos.` });
-        }
-    }
-    return { error: null, platform: platforms[0], periods: sorted, warnings };
-}
-// #testavel:fim
 
 // O indicador de resultado (objetivo real da Meta) tem prioridade; o nome da campanha é o plano B
 // Tipo de campanha do Google Ads -> objetivo
@@ -799,100 +720,57 @@ function typeCards(c) {
 // ---------- Fluxo de arquivo ----------
 const platform = () => document.getElementById('opt-platform').value;
 
-const LOTE_KEY = 'gg-analytics-last-lote';
-
-function readFileText(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = e => {
-            // O Google Ads às vezes exporta em UTF-16 (BOM FF FE); a Meta exporta em UTF-8
-            const bytes = new Uint8Array(e.target.result);
-            const encoding = bytes[0] === 0xFF && bytes[1] === 0xFE ? 'utf-16le' : bytes[0] === 0xFE && bytes[1] === 0xFF ? 'utf-16be' : 'utf-8';
-            resolve(new TextDecoder(encoding).decode(bytes));
-        };
-        reader.onerror = () => reject(new Error('falha ao ler o arquivo.'));
-        reader.readAsArrayBuffer(file);
-    });
-}
-
-async function handleFiles(files) {
-    files = [...(files || [])];
-    if (!files.length) return;
-    const bad = files.find(f => !/\.csv$/i.test(f.name) && f.type !== 'text/csv');
-    if (bad) return uploadError(`${bad.name}: o arquivo precisa ser .csv.`);
-    const sources = [];
-    for (const f of files) {
-        try { sources.push({ fileName: f.name, text: await readFileText(f) }); }
-        catch (err) { return uploadError(`Não foi possível ler ${f.name}: ${err.message}`); }
-    }
-    loadLote(sources);
-}
-
-// Lê os CSVs, monta o Lote e só então troca o que está na tela; se algo falhar, a tela anterior fica como estava
-function loadLote(sources, restored = false) {
-    const periods = [];
-    for (const src of sources) {
-        try { periods.push({ ...parseReport(src.text), fileName: src.fileName, text: src.text }); }
-        catch (err) { return uploadError(`Não foi possível ler ${src.fileName}: ${err.message}`); }
-    }
-    const lote = assembleLote(periods);
-    if (lote.error) return uploadError(lote.error);
-    state.lote = lote;
-    if (!state.platformChosen) document.getElementById('opt-platform').value = lote.platform;
-    if (!restored) saveLote(lote);
-    showPeriod(lote.periods.length - 1, true);
-}
-
-function saveLote(lote) {
-    try { localStorage.setItem(LOTE_KEY, JSON.stringify({ savedAt: Date.now(), files: lote.periods.map(p => ({ fileName: p.fileName, text: p.text })) })); }
-    catch { /* armazenamento indisponível ou cheio: o Lote vale só nesta sessão */ }
-}
-function loadSavedLote() {
-    try { const v = JSON.parse(localStorage.getItem(LOTE_KEY)); return v && Array.isArray(v.files) && v.files.length ? v : null; } catch { return null; }
-}
-function renderRestore() {
-    const saved = loadSavedLote();
-    const el = document.getElementById('lote-restore');
-    if (!saved || state.lote) { el.innerHTML = ''; return; }
-    const n = saved.files.length;
-    el.innerHTML = `<button class="btn" id="btn-restore">↩ Reabrir o último Lote (${n} ${n === 1 ? 'arquivo' : 'arquivos'}, ${new Date(saved.savedAt).toLocaleDateString('pt-BR')})</button>`;
-    document.getElementById('btn-restore').addEventListener('click', () => loadLote(saved.files, true));
-}
-
-// Mostra um Período do Lote nas telas da V2 (o Comparativo entre Períodos vem em outra etapa)
-function showPeriod(i, announce = false) {
-    const lote = state.lote, p = lote.periods[i];
-    state.periodIndex = i;
-    decimalComma = p.decimalComma;
-    const overrides = loadOverrides();
-    state.allRows = p.dataRows.map((r, n) => buildCampaign(r, p.idx, n, overrides));
-    state.fileName = p.fileName;
-    state.selectedId = null;
-    applyFilterOption();
-
-    document.getElementById('file-pill').textContent = `${p.fileName} · ${fmtDate(p.start)} a ${fmtDate(p.end)}`;
-    const manual = state.allRows.filter(c => c.typeManual).length;
-    let msg = `<div class="alert alert-info">✓ <strong>${esc(p.fileName)}</strong>: ${state.allRows.length} campanhas lidas, ${state.campaigns.length} em análise.${manual ? ` ${manual} com objetivo ajustado manualmente antes.` : ''}</div>`;
-    const optionalMissing = ['linkClicks', 'lpv', 'purchases', 'revenue', 'followers', 'conversations'].filter(k => p.idx[k] === -1);
-    // O Google Ads não tem essas colunas por natureza; o aviso só vale para a Meta
-    if (optionalMissing.length && p.platform === 'meta') msg += `<div class="alert alert-warning">Colunas não encontradas (as métricas correspondentes ficam vazias): ${optionalMissing.map(k => COLUMN_MAP[k][0]).join(', ')}.</div>`;
-    if (lote.periods.length > 1) {
-        msg += `<div class="alert alert-info"><strong>Lote com ${lote.periods.length} Períodos</strong> (ordenados pelas datas). Escolha qual mostrar nas telas de análise:<div id="lote-periods">` +
-            lote.periods.map((q, k) => `<label style="display:block"><input type="radio" name="periodo" value="${k}"${k === i ? ' checked' : ''}> ${fmtDate(q.start)} a ${fmtDate(q.end)} · ${esc(q.fileName)}</label>`).join('') + '</div></div>';
-        msg += lote.warnings.map(w => `<div class="alert alert-warning">⚠ ${esc(w.text)}</div>`).join('');
-    }
-    document.getElementById('upload-msg').innerHTML = msg;
-    document.getElementById('lote-restore').innerHTML = '';
-    document.querySelectorAll('#lote-periods input').forEach(r => r.addEventListener('change', () => showPeriod(+r.value)));
-    if (announce) {
-        toast(lote.periods.length > 1 ? `Lote carregado: ${lote.periods.length} Períodos` : 'CSV carregado!');
-        switchTab(state.campaigns.length ? 'overview' : 'upload');
-    }
+function handleFile(file) {
+    if (!file) return;
+    if (!/\.csv$/i.test(file.name) && file.type !== 'text/csv') return uploadError('O arquivo precisa ser .csv.');
+    const reader = new FileReader();
+    reader.onload = e => {
+        // O Google Ads às vezes exporta em UTF-16 (BOM FF FE); a Meta exporta em UTF-8
+        const bytes = new Uint8Array(e.target.result);
+        const encoding = bytes[0] === 0xFF && bytes[1] === 0xFE ? 'utf-16le' : bytes[0] === 0xFE && bytes[1] === 0xFF ? 'utf-16be' : 'utf-8';
+        try { loadCSV(new TextDecoder(encoding).decode(bytes), file.name); }
+        catch (err) { uploadError('Não foi possível ler o CSV: ' + err.message); }
+    };
+    reader.onerror = () => uploadError('Falha ao ler o arquivo.');
+    reader.readAsArrayBuffer(file);
 }
 
 function uploadError(msg) {
     document.getElementById('upload-msg').innerHTML = `<div class="alert alert-danger">⚠️ ${esc(msg)}</div>`;
     toast(msg, true);
+}
+
+function loadCSV(text, fileName) {
+    const rows = parseCSV(text);
+    if (rows.length < 2) throw new Error('arquivo vazio ou sem linhas de dados.');
+    // O cabeçalho é a primeira linha que tem nome da campanha e investimento (o Google Ads põe título e período antes)
+    const headerAt = rows.slice(0, 15).findIndex(r => { const ix = resolveColumns(r); return ix.name > -1 && ix.spend > -1; });
+    const idx = resolveColumns(rows[Math.max(0, headerAt)]);
+    const missing = ['name', 'spend', 'impressions'].filter(k => idx[k] === -1);
+    if (missing.length) throw new Error('colunas obrigatórias não encontradas: ' + missing.map(k => COLUMN_MAP[k][0]).join(', ') + '.');
+
+    const overrides = loadOverrides();
+    // Linhas de total do Google Ads ("Total: Conta", "Total: Pesquisa"…) não são campanhas
+    const dataRows = rows.slice(headerAt + 1).filter(r => !r.some(f => /^total:/.test(norm(f))));
+    state.allRows = dataRows.map((r, i) => buildCampaign(r, idx, i, overrides));
+    const isGoogle = idx.googleType > -1;
+    // A plataforma segue o arquivo, a menos que o usuário tenha escolhido uma na mão
+    if (!state.platformChosen) document.getElementById('opt-platform').value = isGoogle ? 'google' : 'meta';
+    state.fileName = fileName;
+    state.selectedId = null;
+    applyFilterOption();
+
+    const first = state.allRows[0];
+    const period = first && first.start ? ` · ${fmtDate(first.start)} a ${fmtDate(first.end)}` : '';
+    document.getElementById('file-pill').textContent = fileName + period;
+    const manual = state.allRows.filter(c => c.typeManual).length;
+    let msg = `<div class="alert alert-info">✓ <strong>${esc(fileName)}</strong>: ${state.allRows.length} campanhas lidas, ${state.campaigns.length} em análise.${manual ? ` ${manual} com objetivo ajustado manualmente antes.` : ''}</div>`;
+    const optionalMissing = ['linkClicks', 'lpv', 'purchases', 'revenue', 'followers', 'conversations'].filter(k => idx[k] === -1);
+    // O Google Ads não tem essas colunas por natureza; o aviso só vale para a Meta
+    if (optionalMissing.length && !isGoogle) msg += `<div class="alert alert-warning">Colunas não encontradas (as métricas correspondentes ficam vazias): ${optionalMissing.map(k => COLUMN_MAP[k][0]).join(', ')}.</div>`;
+    document.getElementById('upload-msg').innerHTML = msg;
+    toast('CSV carregado!');
+    switchTab(state.campaigns.length ? 'overview' : 'upload');
 }
 
 function applyFilterOption() {
@@ -1161,11 +1039,11 @@ document.getElementById('f-type').insertAdjacentHTML('beforeend', TYPE_KEYS.map(
 const dz = document.getElementById('dropzone');
 const fileInput = document.getElementById('file-input');
 dz.addEventListener('click', () => fileInput.click());
-fileInput.addEventListener('change', e => { handleFiles(e.target.files); e.target.value = ''; });
+fileInput.addEventListener('change', e => { handleFile(e.target.files[0]); e.target.value = ''; });
 ['dragenter', 'dragover'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('drag'); }));
 // dragleave também dispara ao passar sobre elementos filhos; só tira o destaque ao sair da área
 dz.addEventListener('dragleave', e => { if (!dz.contains(e.relatedTarget)) dz.classList.remove('drag'); });
-dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag'); handleFiles(e.dataTransfer.files); });
+dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag'); handleFile(e.dataTransfer.files[0]); });
 
 document.getElementById('opt-hide-zero').addEventListener('change', applyFilterOption);
 document.getElementById('opt-platform').addEventListener('change', () => { state.platformChosen = true; renderAll(); });
@@ -1187,7 +1065,6 @@ table.addEventListener('click', e => {
     const tr = e.target.closest('tr[data-id]');
     if (tr) openAnalysis(tr.dataset.id);
 });
-renderRestore();
 </script>
 </body>
 </html>

@@ -7,7 +7,7 @@ import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const html = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'Grupo-Galpao-Analytics-v2.html'), 'utf8');
+const html = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'Grupo-Galpao-Analytics-v3.html'), 'utf8');
 const trechos = [...html.matchAll(/\/\/ #testavel:inicio[^\n]*\n([\s\S]*?)\/\/ #testavel:fim/g)].map(m => m[1]);
 assert.ok(trechos.length >= 3, 'trechos testáveis não encontrados no HTML');
 const lib = new Function(`${trechos.join('\n')}\nreturn { parseDateRange, parseReport, assembleLote, parseCSV, parseNumber };`)();
