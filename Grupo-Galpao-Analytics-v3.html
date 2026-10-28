@@ -192,6 +192,15 @@ tbody tr:hover { background: rgba(69,189,254,.08); }
 .type-select.manual { border-color: var(--gold); color: var(--gold); }
 .type-select:focus { outline: none; border-color: var(--megaman); }td.num { white-space: nowrap; }
 
+/* Janela do Gerar relatório */
+.rel-setup { position: fixed; inset: 0; z-index: 350; background: rgba(0,10,16,.75); display: grid; place-items: center; padding: 1rem; overflow: auto; }
+.rel-setup[hidden] { display: none; }
+.rel-setup-box { width: min(760px, 100%); max-height: 92vh; overflow: auto; background: var(--navy-2); border: 1px solid var(--line); border-radius: 18px; padding: 1.5rem; }
+.rel-setup-box h3 { font-size: 22px; margin-bottom: .3rem; }
+.rel-setup-box .muted { margin-bottom: 1rem; font-size: 14px; }
+.su-campo { display: grid; gap: .3rem; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 1rem; }
+.rel-setup-acoes { display: flex; justify-content: flex-end; gap: .6rem; margin-top: 1.5rem; }
+
 /* Relatório (prévia) */
 #rel { position: fixed; inset: 0; z-index: 400; background: #5b6872; overflow: auto; }
 #rel[hidden] { display: none; }
@@ -340,6 +349,16 @@ input[type=text]:focus, select:focus { outline: none; border-color: var(--megama
 
 <footer class="footer">© 2026 Grupo Galpão · Performance+ · Dados processados localmente no navegador</footer>
 <div id="toast" class="toast"></div>
+
+<!-- Janela do Gerar relatório: logo e Metas do Cliente -->
+<div id="rel-setup" class="rel-setup" hidden>
+    <div class="rel-setup-box" role="dialog" aria-label="Dados do Relatório">
+        <h3>Antes de gerar o Relatório</h3>
+        <p class="muted">Envie o logo do Cliente e confira as Metas. Ficam guardados no Perfil para os próximos Relatórios.</p>
+        <div id="rel-setup-corpo"></div>
+        <div class="rel-setup-acoes"><button class="btn btn-outline" id="su-cancelar">Cancelar</button><button class="btn btn-primary" id="su-gerar">📄 Gerar relatório</button></div>
+    </div>
+</div>
 
 <!-- Relatório: prévia em tela cheia; as páginas moram num iframe para não herdar o CSS do app -->
 <div id="rel" hidden>
@@ -2448,7 +2467,24 @@ function logoParaDataUrl(file) {
     });
 }
 
+// Linhas de Metas, usadas na aba Cliente e na janela do Gerar relatório
+function metasHTML(p) {
+    const opt = (v, label, sel) => `<option value="${esc(v)}"${sel ? ' selected' : ''}>${esc(label)}</option>`;
+    return p.metas.length ? p.metas.map(m => {
+                const def = METRICAS_META[m.metrica];
+                return `<div class="meta-row" data-meta="${esc(m.id)}">
+                    <select data-f="metrica">${Object.entries(METRICAS_META).map(([k, d]) => opt(k, d.label, k === m.metrica)).join('')}</select>
+                    <select data-f="objetivo">${opt('total', 'Total da conta', m.objetivo === 'total')}${TYPE_KEYS.map(k => opt(k, TYPES[k].label, k === m.objetivo)).join('')}</select>
+                    <select data-f="comparador">${opt('<=', 'até (≤)', m.comparador === '<=')}${opt('>=', 'ao menos (≥)', m.comparador === '>=')}</select>
+                    <input type="text" inputmode="decimal" data-f="valor" value="${esc(fmtNum(m.valor, 2))}" aria-label="Valor da Meta">
+                    <button class="btn btn-sm btn-outline" data-meta-x="${esc(m.id)}" title="Remover">✕</button>
+                    ${m.objetivo === 'total' && def.noTotal === false ? '<span class="muted meta-hint">Resultado só existe dentro de um Objetivo: escolha um.</span>' : ''}
+                </div>`;
+            }).join('') : '<p class="muted">Nenhuma Meta. Exemplo: Custo por Resultado de Vendas até R$ 40, ou ROAS ao menos 8×. As Metas atingidas aparecem no Relatório.</p>';
+}
+
 function renderCliente() {
+    if (typeof setupEl !== 'undefined' && !setupEl.hidden) renderSetup();
     const el = document.getElementById('cliente');
     const p = perfilAtual();
     const periods = state.lote ? state.lote.periods : [];
@@ -2478,17 +2514,7 @@ function renderCliente() {
     </div>
     <div class="card mb-4"><div class="card-header row"><div class="card-title">Metas</div><button class="btn btn-sm" id="pf-meta-add">＋ Adicionar Meta</button></div>
         <div class="card-content">
-            ${p.metas.length ? p.metas.map(m => {
-                const def = METRICAS_META[m.metrica];
-                return `<div class="meta-row" data-meta="${esc(m.id)}">
-                    <select data-f="metrica">${Object.entries(METRICAS_META).map(([k, d]) => opt(k, d.label, k === m.metrica)).join('')}</select>
-                    <select data-f="objetivo">${opt('total', 'Total da conta', m.objetivo === 'total')}${TYPE_KEYS.map(k => opt(k, TYPES[k].label, k === m.objetivo)).join('')}</select>
-                    <select data-f="comparador">${opt('<=', 'até (≤)', m.comparador === '<=')}${opt('>=', 'ao menos (≥)', m.comparador === '>=')}</select>
-                    <input type="text" inputmode="decimal" data-f="valor" value="${esc(fmtNum(m.valor, 2))}" aria-label="Valor da Meta">
-                    <button class="btn btn-sm btn-outline" data-meta-x="${esc(m.id)}" title="Remover">✕</button>
-                    ${m.objetivo === 'total' && def.noTotal === false ? '<span class="muted meta-hint">Resultado só existe dentro de um Objetivo: escolha um.</span>' : ''}
-                </div>`;
-            }).join('') : '<p class="muted">Nenhuma Meta. Exemplo: Custo por Resultado de Vendas até R$ 40, ou ROAS ao menos 8×. As Metas atingidas aparecem no Relatório.</p>'}
+            ${metasHTML(p)}
         </div></div>
     <div class="card"><div class="card-header"><div class="card-title">Ajustes de Objetivo</div></div>
         <div class="card-content">
@@ -2498,11 +2524,11 @@ function renderCliente() {
 }
 
 const clienteEl = document.getElementById('cliente');
-clienteEl.addEventListener('change', async e => {
-    const p = perfilAtual(), t = e.target;
-    if (t.id === 'pf-select') { state.perfis.atual = t.value; salvarPerfis(); renderCliente(); renderComparativo(); return; }
-    if (t.id === 'pf-nome') { p.nome = t.value.trim() || 'Cliente'; salvarPerfis(); renderCliente(); renderComparativo(); return; }
-    if (t.id === 'pf-logo' && t.files[0]) {
+async function onClienteChange(e) {
+    const p = perfilAtual(), t = e.target, id = (t.id || '').replace(/^su-/, 'pf-');
+    if (id === 'pf-select') { state.perfis.atual = t.value; salvarPerfis(); renderCliente(); renderComparativo(); return; }
+    if (id === 'pf-nome') { p.nome = t.value.trim() || 'Cliente'; salvarPerfis(); renderCliente(); renderComparativo(); return; }
+    if (id === 'pf-logo' && t.files[0]) {
         const url = await logoParaDataUrl(t.files[0]);
         if (!url) return toast('Não foi possível ler essa imagem.', true);
         p.logo = url; salvarPerfis(); renderCliente(); return;
@@ -2523,18 +2549,19 @@ clienteEl.addEventListener('change', async e => {
         }
         salvarPerfis(); renderCliente(); renderComparativo();
     }
-});
-clienteEl.addEventListener('click', e => {
+}
+function onClienteClick(e) {
     const p = perfilAtual(), b = e.target.closest('button');
     if (!b) return;
-    if (b.id === 'pf-novo') {
+    const id = (b.id || '').replace(/^su-/, 'pf-');
+    if (id === 'pf-novo') {
         const novo = normalizarPerfil({ nome: 'Novo Cliente' });
         state.perfis.lista.push(novo); state.perfis.atual = novo.id; salvarPerfis(); renderCliente(); renderComparativo();
-    } else if (b.id === 'pf-excluir') {
+    } else if (id === 'pf-excluir') {
         if (!confirm(`Excluir o Perfil “${p.nome}”, com Metas e Faturamento?`)) return;
         state.perfis.lista = state.perfis.lista.filter(x => x.id !== p.id); state.perfis.atual = state.perfis.lista[0].id; salvarPerfis(); renderCliente(); renderComparativo();
-    } else if (b.id === 'pf-logo-x') { p.logo = null; salvarPerfis(); renderCliente(); }
-    else if (b.id === 'pf-meta-add') {
+    } else if (id === 'pf-logo-x') { p.logo = null; salvarPerfis(); renderCliente(); }
+    else if (id === 'pf-meta-add') {
         p.metas.push({ id: novoId(), metrica: 'costPerResult', objetivo: 'ecommerce', comparador: '<=', valor: 40 }); salvarPerfis(); renderCliente();
     } else if (b.dataset.metaX) { p.metas = p.metas.filter(m => m.id !== b.dataset.metaX); salvarPerfis(); renderCliente(); renderComparativo(); }
     else if (b.dataset.ajusteX) {
@@ -2543,8 +2570,29 @@ clienteEl.addEventListener('click', e => {
         if (state.lote) showPeriod(state.periodIndex); else renderCliente();
         renderComparativo();
     }
+}
+clienteEl.addEventListener('change', onClienteChange);
+clienteEl.addEventListener('click', onClienteClick);
+const setupEl = document.getElementById('rel-setup');
+setupEl.addEventListener('change', onClienteChange);
+setupEl.addEventListener('click', e => {
+    if (e.target.closest('#su-gerar')) { fecharSetup(); abrirRelatorio(); return; }
+    if (e.target.closest('#su-cancelar') || e.target === setupEl) { fecharSetup(); return; }
+    onClienteClick(e);
 });
 
+// Janela que abre ao clicar em Gerar relatório: logo e Metas do Cliente, já preenchidos pelo Perfil
+function renderSetup() {
+    const p = perfilAtual();
+    document.getElementById('rel-setup-corpo').innerHTML = `
+        <label class="su-campo">Nome do Cliente<input type="text" id="su-nome" value="${esc(p.nome)}" maxlength="80"></label>
+        <div class="logo-edit">${p.logo ? `<img src="${p.logo}" alt="Logo de ${esc(p.nome)}">` : '<span class="muted">Sem logo: a capa usa o nome do Cliente.</span>'}
+            <div><label class="btn btn-sm btn-outline" for="su-logo">${p.logo ? 'Trocar logo' : 'Enviar logo do Cliente'}</label><input type="file" id="su-logo" accept="image/*" hidden>${p.logo ? '<button class="btn btn-sm btn-outline" id="su-logo-x">Remover</button>' : ''}</div></div>
+        <div class="row" style="margin-top:1rem"><strong>Metas</strong><button class="btn btn-sm" id="su-meta-add">＋ Adicionar Meta</button></div>
+        <div style="margin-top:.6rem">${metasHTML(p)}</div>`;
+}
+function abrirSetup() { renderSetup(); setupEl.hidden = false; }
+function fecharSetup() { setupEl.hidden = true; }
 
 renderCliente();
 // ---------- Aba Comparativo ----------
@@ -2676,7 +2724,7 @@ document.getElementById('comparativo').addEventListener('click', e => {
     const b = e.target.closest('button');
     if (!b) return;
     if (b.id === 'cmp-sug') { state.cmp.analisado = [...state.cmp.sugestao.analisado]; state.cmp.comparacao = [...state.cmp.sugestao.comparacao]; renderComparativo(); }
-    else if (b.id === 'cmp-relatorio') abrirRelatorio();
+    else if (b.id === 'cmp-relatorio') abrirSetup();
 });
 iniciarComparativo();
 // ---------- Relatório: prévia, edição e PDF ----------
