@@ -335,6 +335,7 @@ const COLUMN_MAP = {
 // #testavel:fim
 
 // ---------- Tipos de campanha ----------
+// #testavel:inicio
 // Cada tipo define: como é detectado, qual é o resultado principal e o funil próprio.
 // O resultado principal usa a coluna dedicada quando existe; senão, "Resultados" quando o indicador bate com o tipo.
 const TYPES = {
@@ -397,13 +398,13 @@ function classifyByName(rawName) {
     for (const k of NAME_ORDER) if (TYPES[k].name.test(name)) return k;
     return 'outro';
 }
+// #testavel:fim
 
 let state = { lote: null, periodIndex: 0, fileName: '', allRows: [], campaigns: [], selectedId: null, sort: { key: 'spend', dir: -1 } };
 
 // ---------- Utilidades ----------
 // #testavel:inicio
 const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/^﻿/, '').trim().toLowerCase();
-// #testavel:fim
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const div = (a, b) => (b > 0 ? a / b : null);
 const ratePct = (a, b) => (b > 0 ? (a / b) * 100 : null);
@@ -414,6 +415,7 @@ const pct = (v, d = 2) => v == null ? '—' : v.toLocaleString('pt-BR', { minimu
 const mult = v => v == null ? '—' : v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + 'x';
 const statusLabel = c => (c.status === 'active' ? 'Ativa' : 'Inativa');
 const scoreStatus = s => (s == null ? 'none' : s >= 80 ? 'good' : s >= 60 ? 'average' : 'poor');
+// #testavel:fim
 
 // #testavel:inicio
 // Exportação em ";" (pt-BR) usa vírgula decimal e ponto de milhar; em "," usa ponto decimal
@@ -555,6 +557,7 @@ function assembleLote(periods) {
 }
 // #testavel:fim
 
+// #testavel:inicio
 // O indicador de resultado (objetivo real da Meta) tem prioridade; o nome da campanha é o plano B
 // Tipo de campanha do Google Ads -> objetivo
 const GOOGLE_TYPE_MAP = [
@@ -632,6 +635,8 @@ function withDerived(c) {
     return c;
 }
 
+// #testavel:fim
+
 function setType(id, type) {
     const c = state.allRows.find(x => x.id === id);
     if (!c || !TYPES[type]) return;
@@ -643,6 +648,7 @@ function setType(id, type) {
     toast(`Objetivo de “${c.name}” alterado para ${TYPES[type].label}.`);
 }
 
+// #testavel:inicio
 const SUM_KEYS = ['results', 'reach', 'spend', 'impressions', 'linkClicks', 'allClicks', 'lpv', 'addToCart', 'checkout', 'purchases', 'revenue', 'followers', 'conversations', 'leads', 'engagement', 'thruplays', 'videoPlays'];
 function sumCampaigns(list, name = 'Total', type = 'outro') {
     const t = { id: 'total', name, type, ind: '', typeManual: true };
@@ -660,6 +666,251 @@ function sumCampaigns(list, name = 'Total', type = 'outro') {
     else if (list.length === 1) t.frequency = list[0].frequency;
     return t;
 }
+// #testavel:fim
+
+// ---------- Motor de comparação (módulo puro) ----------
+// Entrada: os Períodos lidos (assembleLote), o Período analisado, o Período de comparação e os ajustes de Objetivo.
+// Saída: agregados por total, por Objetivo e por Campanha, com as variações. Sem DOM.
+// #testavel:inicio
+// Como o Cliente chama o Resultado de cada Objetivo
+const RESULTADO_TXT = {
+    ecommerce: { sing: 'compra', plur: 'compras', custo: 'custo por compra' },
+    mensagens: { sing: 'conversa', plur: 'conversas', custo: 'custo por conversa' },
+    leads: { sing: 'lead', plur: 'leads', custo: 'custo por lead' },
+    perfil: { sing: 'visita ao perfil', plur: 'visitas ao perfil', custo: 'custo por visita' },
+    trafego: { sing: 'visita ao site', plur: 'visitas ao site', custo: 'custo por visita' },
+    engajamento: { sing: 'engajamento', plur: 'engajamentos', custo: 'custo por engajamento' },
+    alcance: { sing: 'pessoa alcançada', plur: 'pessoas alcançadas', custo: 'custo por pessoa' },
+    outro: { sing: 'resultado', plur: 'resultados', custo: 'custo por resultado' }
+};
+
+// kind: volume (soma), custo (R$ por unidade), taxa (%), razao (×). good: sentido que é bom para o Cliente.
+const METRICAS = {
+    spend: { label: 'Investimento', kind: 'volume', good: 'up' },
+    impressions: { label: 'Impressões', kind: 'volume', good: 'up' },
+    reach: { label: 'Alcance', kind: 'volume', good: 'up' },
+    linkClicks: { label: 'Cliques no link', kind: 'volume', good: 'up' },
+    mainResult: { label: 'Resultado', kind: 'volume', good: 'up' },
+    revenue: { label: 'Faturamento', kind: 'volume', good: 'up' },
+    costPerResult: { label: 'Custo por Resultado', kind: 'custo', good: 'down' },
+    cpc: { label: 'CPC', kind: 'custo', good: 'down' },
+    cpm: { label: 'CPM', kind: 'custo', good: 'down' },
+    ctr: { label: 'CTR', kind: 'taxa', good: 'up' },
+    roas: { label: 'ROAS', kind: 'razao', good: 'up' }
+};
+
+const MES_ABREV = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+const MES_NOME = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+const diasDe = p => dayNum(p.end) - dayNum(p.start) + 1;
+const mesDe = s => +s.slice(0, 4) * 12 + +s.slice(5, 7) - 1;
+const periodoKey = p => `${p.start}_${p.end}`;
+const ultimoDiaDoMes = s => new Date(Date.UTC(+s.slice(0, 4), +s.slice(5, 7), 0)).getUTCDate();
+
+// "1 a 28 out 2026", "28 set a 3 out 2026", "30 dez 2026 a 5 jan 2027"
+function faixaTexto(start, end) {
+    const d = s => +s.slice(8, 10), m = s => MES_ABREV[+s.slice(5, 7) - 1], y = s => s.slice(0, 4);
+    if (start === end) return `${d(start)} ${m(start)} ${y(start)}`;
+    if (y(start) !== y(end)) return `${d(start)} ${m(start)} ${y(start)} a ${d(end)} ${m(end)} ${y(end)}`;
+    if (m(start) !== m(end)) return `${d(start)} ${m(start)} a ${d(end)} ${m(end)} ${y(end)}`;
+    return `${d(start)} a ${d(end)} ${m(end)} ${y(end)}`;
+}
+// Rótulo curto de um Período: "Set/2026" se for o mês inteiro, senão a faixa
+function rotuloPeriodo(p) {
+    const mes = p.start.slice(0, 7) === p.end.slice(0, 7);
+    if (mes && +p.start.slice(8, 10) === 1 && +p.end.slice(8, 10) === ultimoDiaDoMes(p.end)) return `${MES_NOME[+p.start.slice(5, 7) - 1].slice(0, 3)}/${p.start.slice(0, 4)}`;
+    return faixaTexto(p.start, p.end);
+}
+// Nome do mês do Período analisado, quando ele cabe num mês só ("Outubro"); senão null
+function nomeDoMes(start, end) { return start.slice(0, 7) === end.slice(0, 7) ? MES_NOME[+start.slice(5, 7) - 1] : null; }
+
+const presente = c => c.spend > 0 || c.impressions > 0;
+
+// Campanhas de um Período com os ajustes de Objetivo (por nome, valem para todos os Períodos)
+function campanhasDoPeriodo(p, overrides = {}) {
+    decimalComma = p.decimalComma; // o separador decimal é por arquivo
+    return p.dataRows.map((r, n) => buildCampaign(r, p.idx, n, overrides));
+}
+
+// Soma por Campanha (nome exato), por Objetivo e no total. O Resultado só se soma dentro do mesmo Objetivo.
+function agregar(rows, overrides = {}) {
+    const porNome = new Map();
+    for (const c of rows) { if (!porNome.has(c.name)) porNome.set(c.name, []); porNome.get(c.name).push(c); }
+    const campanhas = [];
+    for (const [nome, lista] of porNome) {
+        // Mesma Campanha em vários Períodos pode ser detectada com Objetivos diferentes: vale o ajuste manual, senão o da linha de maior Investimento
+        const dominante = lista.reduce((a, b) => (b.spend > a.spend ? b : a));
+        const tipo = overrides[nome] && TYPES[overrides[nome]] ? overrides[nome] : dominante.type;
+        lista.forEach(c => { c.type = tipo; withDerived(c); });
+        const t = sumCampaigns(lista, nome, tipo);
+        campanhas.push({ ...t, nome, tipo, ativa: lista.some(c => c.status === 'active'), linhas: lista.length });
+    }
+    const porObjetivo = {};
+    for (const k of TYPE_KEYS) {
+        const l = rows.filter(c => c.type === k);
+        if (l.length) porObjetivo[k] = { ...sumCampaigns(l, TYPES[k].label, k), tipo: k, nCampanhas: campanhas.filter(c => c.tipo === k).length };
+    }
+    const total = sumCampaigns(rows, 'Total', 'outro');
+    // Não existe "Resultado total": Resultado e Custo por Resultado só fazem sentido dentro de um Objetivo
+    total.mainResult = null; total.costPerResult = null; total.retention = null;
+    // A receita do CSV só cobre as Campanhas de venda; o ROAS do total vem do Faturamento manual (resumirSelecao)
+    total.receitaCsv = total.revenue; total.revenue = 0; total.roas = null;
+    total.nCampanhas = campanhas.length;
+    return { total, porObjetivo, campanhas };
+}
+
+// Faturamento manual (por Período) da seleção; só vale se todos os Períodos da seleção tiverem valor
+function faturamentoDe(periods, indices, faturamento = {}) {
+    const vals = indices.map(i => faturamento[periodoKey(periods[i])]);
+    return vals.length && vals.every(v => typeof v === 'number' && v >= 0) ? vals.reduce((a, b) => a + b, 0) : null;
+}
+
+// Um ou mais Períodos viram um intervalo agregado
+function resumirSelecao(periods, indices, { overrides = {}, ignorarZero = true, faturamento = {} } = {}) {
+    let rows = [];
+    for (const i of indices) for (const c of campanhasDoPeriodo(periods[i], overrides)) { c.periodo = i; rows.push(c); }
+    if (ignorarZero) rows = rows.filter(presente);
+    const ag = agregar(rows, overrides);
+    const sel = indices.map(i => periods[i]);
+    const fat = faturamentoDe(periods, indices, faturamento);
+    if (fat != null) { ag.total.revenue = fat; ag.total.roas = div(fat, ag.total.spend); }
+    return {
+        indices: [...indices], start: sel.map(p => p.start).sort()[0], end: sel.map(p => p.end).sort().pop(),
+        dias: sel.reduce((s, p) => s + diasDe(p), 0), faturamento: fat, ...ag
+    };
+}
+
+// Variação de uma métrica. Volumes de Períodos com durações muito diferentes são comparados por dia.
+function variacao(atual, base, key, { diasAtual = 1, diasBase = 1 } = {}) {
+    const m = METRICAS[key];
+    const nd = { atual: atual ?? null, base: base ?? null, delta: null, pct: null, pp: null, dir: null, bom: null, porDia: false };
+    if (atual == null || base == null || !m) return nd;
+    let a = atual, b = base, porDia = false;
+    if (m.kind === 'volume') {
+        const razao = diasAtual / diasBase;
+        if (razao < 0.8 || razao > 1.25) { a = atual / diasAtual; b = base / diasBase; porDia = true; }
+    }
+    const delta = a - b;
+    const dir = Math.abs(delta) < 1e-9 ? 'flat' : delta > 0 ? 'up' : 'down';
+    return {
+        atual, base, delta, porDia, dir,
+        pct: b > 0 ? (a / b - 1) * 100 : null,
+        pp: m.kind === 'taxa' ? delta : null,
+        bom: dir === 'flat' ? null : dir === m.good
+    };
+}
+
+function variacoes(a, b, ctx) {
+    return Object.fromEntries(Object.keys(METRICAS).map(k => [k, variacao(a ? a[k] : null, b ? b[k] : null, k, ctx)]));
+}
+
+// Em quais Períodos do Lote cada Campanha aparece (com investimento ou impressões)
+function presencaNoLote(periods, overrides = {}) {
+    const mapa = new Map();
+    periods.forEach((p, i) => {
+        for (const c of campanhasDoPeriodo(p, overrides)) {
+            if (!presente(c)) continue;
+            if (!mapa.has(c.name)) mapa.set(c.name, new Set());
+            mapa.get(c.name).add(i);
+        }
+    });
+    return mapa;
+}
+
+// opts: { analisado: [índices], comparacao: [índices] | [], overrides, ignorarZero, faturamento }
+function compararPeriodos(periods, opts) {
+    const o = { overrides: opts.overrides || {}, ignorarZero: opts.ignorarZero !== false, faturamento: opts.faturamento || {} };
+    const A = resumirSelecao(periods, opts.analisado, o);
+    const B = opts.comparacao && opts.comparacao.length ? resumirSelecao(periods, opts.comparacao, o) : null;
+    const ctx = { diasAtual: A.dias, diasBase: B ? B.dias : A.dias };
+    const presenca = presencaNoLote(periods, o.overrides);
+    const n = periods.length;
+
+    const tipos = [...new Set([...Object.keys(A.porObjetivo), ...(B ? Object.keys(B.porObjetivo) : [])])]
+        .sort((x, y) => ((A.porObjetivo[y]?.spend || 0) - (A.porObjetivo[x]?.spend || 0)) || ((B?.porObjetivo[y]?.spend || 0) - (B?.porObjetivo[x]?.spend || 0)));
+    const objetivos = tipos.map(tipo => {
+        const atual = A.porObjetivo[tipo] || null, base = B ? B.porObjetivo[tipo] || null : null;
+        return { tipo, label: TYPES[tipo].label, atual, base, var: variacoes(atual, base, ctx), participacao: atual ? ratePct(atual.spend, A.total.spend) : null };
+    });
+
+    const mapaA = new Map(A.campanhas.map(c => [c.nome, c])), mapaB = new Map(B ? B.campanhas.map(c => [c.nome, c]) : []);
+    const nomes = [...new Set([...mapaA.keys(), ...mapaB.keys()])];
+    const campanhas = nomes.map(nome => {
+        const atual = mapaA.get(nome) || null, base = mapaB.get(nome) || null;
+        const ps = [...(presenca.get(nome) || [])].sort((x, y) => x - y);
+        const estado = !B ? null : atual && base ? 'mantida' : atual ? 'nova' : 'encerrada';
+        return {
+            nome, tipo: (atual || base).tipo, estado, atual, base, var: variacoes(atual, base, ctx),
+            ciclo: { periodos: ps, primeiro: ps.length ? ps[0] : null, ultimo: ps.length ? ps[ps.length - 1] : null, nova: ps.length > 0 && ps[0] > 0, encerrada: ps.length > 0 && ps[ps.length - 1] < n - 1 }
+        };
+    }).sort((x, y) => ((y.atual ? y.atual.spend : 0) - (x.atual ? x.atual.spend : 0)) || ((y.base ? y.base.spend : 0) - (x.base ? x.base.spend : 0)));
+
+    const razao = ctx.diasAtual / ctx.diasBase;
+    return {
+        analisado: A, comparacao: B, dias: { analisado: A.dias, comparacao: B ? B.dias : null, porDia: !!B && (razao < 0.8 || razao > 1.25) },
+        total: variacoes(A.total, B ? B.total : null, ctx), objetivos, campanhas
+    };
+}
+
+// Evolução: um agregado por Período do Lote. Com durações mistas, os volumes aparecem por dia.
+function evolucao(periods, opts = {}) {
+    const o = { overrides: opts.overrides || {}, ignorarZero: opts.ignorarZero !== false, faturamento: opts.faturamento || {} };
+    const lista = periods.map((p, i) => ({ ...resumirSelecao(periods, [i], o), indice: i, rotulo: rotuloPeriodo(p) }));
+    const dias = lista.map(x => x.dias);
+    return { periodos: lista, misto: dias.length > 1 && Math.max(...dias) / Math.min(...dias) > 1.25 };
+}
+
+// Série de uma métrica para um escopo ('total' ou um Objetivo). Escopo sem a métrica (ex.: Resultado do total) dá valor null.
+function serieEvolucao(evo, escopo, key) {
+    const porDia = evo.misto && METRICAS[key].kind === 'volume';
+    return {
+        porDia,
+        pontos: evo.periodos.map(p => {
+            const ag = escopo === 'total' ? p.total : p.porObjetivo[escopo];
+            const v = ag ? ag[key] : null;
+            return { indice: p.indice, rotulo: p.rotulo, dias: p.dias, valor: v == null ? null : porDia ? v / p.dias : v };
+        })
+    };
+}
+
+// Sugere "mês atual × mês anterior": o último Período contra o que termina no mês anterior ao dele; senão, o Período imediatamente anterior
+function sugerirComparacao(periods) {
+    if (periods.length < 2) return null;
+    const i = periods.length - 1;
+    const alvo = mesDe(periods[i].start) - 1;
+    for (let j = i - 1; j >= 0; j--) if (mesDe(periods[j].end) === alvo) return { analisado: [i], comparacao: [j], motivo: 'mes' };
+    return { analisado: [i], comparacao: [i - 1], motivo: 'anterior' };
+}
+
+// Matriz Campanha × coluna do Custo por Resultado (heatmap do Gestor).
+// Cada Período do Lote é uma coluna; se o CSV vier com quebra por dia (várias datas de início nas linhas), as colunas viram dias.
+function matrizCustoPorResultado(periods, overrides = {}) {
+    const linhas = periods.map((p, i) => {
+        const cs = campanhasDoPeriodo(p, overrides).filter(presente);
+        return { i, cs, diario: new Set(cs.map(c => c.start).filter(Boolean)).size > 1 };
+    });
+    const diario = linhas.some(l => l.diario);
+    const colunas = diario ? [...new Set(linhas.flatMap(l => l.cs.map(c => c.start)).filter(Boolean))].sort() : periods.map((p, i) => i);
+    const rotulos = diario ? colunas : periods.map(rotuloPeriodo);
+    const mapa = new Map();
+    for (const l of linhas) {
+        for (const c of l.cs) {
+            const col = diario ? colunas.indexOf(c.start) : l.i;
+            if (col < 0) continue;
+            if (!mapa.has(c.name)) mapa.set(c.name, { nome: c.name, tipo: c.type, celulas: colunas.map(() => []) });
+            mapa.get(c.name).celulas[col].push(c);
+        }
+    }
+    const out = [...mapa.values()].map(m => ({
+        nome: m.nome, tipo: m.tipo,
+        valores: m.celulas.map(lista => {
+            if (!lista.length) return null;
+            lista.forEach(c => { c.type = m.tipo; withDerived(c); });
+            return sumCampaigns(lista, m.nome, m.tipo).costPerResult;
+        })
+    })).filter(l => l.valores.some(v => v != null)).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    return { diario, rotulos, linhas: out };
+}
+// #testavel:fim
 
 // ---------- Análise ----------
 function status(value, bm) {
