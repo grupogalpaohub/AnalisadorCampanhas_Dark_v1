@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Grupo Galpão Analytics</title>
+<title>Grupo Galpão Analytics V3</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -201,7 +201,7 @@ tbody tr:hover { background: rgba(69,189,254,.08); }
             <div class="logo-fallback">G</div>
             <div class="logo-text">
                 <h1>GRUPO GALPÃO</h1>
-                <p>Performance &amp; Dados</p>
+                <p>Performance &amp; Dados · V3</p>
             </div>
         </div>
         <div class="file-pill" id="file-pill"></div>
@@ -859,7 +859,7 @@ function renderRestore() {
     document.getElementById('btn-restore').addEventListener('click', () => loadLote(saved.files, true));
 }
 
-// Mostra um Período do Lote nas telas da V2 (o Comparativo entre Períodos vem em outra etapa)
+// Mostra um Período do Lote nas telas de análise (o Comparativo entre Períodos vem em outra etapa)
 function showPeriod(i, announce = false) {
     const lote = state.lote, p = lote.periods[i];
     state.periodIndex = i;
