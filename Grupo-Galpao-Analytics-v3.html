@@ -912,6 +912,190 @@ function matrizCustoPorResultado(periods, overrides = {}) {
 }
 // #testavel:fim
 
+// ---------- Funil por Objetivo, Destaques e Manchetes (módulo puro) ----------
+// #testavel:inicio
+// Etapas do Funil de cada Objetivo, a partir das colunas disponíveis. Etapa sem dado é omitida.
+// rotulo: linguagem do Cliente; nome: linguagem do Gestor.
+const ETAPA_IMP = { key: 'impressions', nome: 'Impressões', rotulo: 'viram um anúncio', get: c => c.impressions };
+const ETAPA_CLIQUE = { key: 'linkClicks', nome: 'Cliques no link', rotulo: 'clicaram para o site', get: c => c.linkClicks };
+const FUNIL_ETAPAS = {
+    ecommerce: [ETAPA_IMP, ETAPA_CLIQUE,
+        { key: 'addToCart', nome: 'Adições ao carrinho', rotulo: 'puseram no carrinho', get: c => c.addToCart },
+        { key: 'checkout', nome: 'Checkouts iniciados', rotulo: 'foram ao pagamento', get: c => c.checkout },
+        { key: 'purchases', nome: 'Compras', rotulo: 'compraram', get: c => c.purchases }],
+    mensagens: [ETAPA_IMP, { ...ETAPA_CLIQUE, rotulo: 'clicaram no anúncio' },
+        { key: 'conversas', nome: 'Conversas iniciadas', rotulo: 'iniciaram uma conversa', get: c => c.mainResult }],
+    leads: [ETAPA_IMP, ETAPA_CLIQUE,
+        { key: 'lpv', nome: 'Visualizações da página', rotulo: 'chegaram ao site', get: c => c.lpv },
+        { key: 'leads', nome: 'Leads', rotulo: 'deixaram o contato', get: c => c.mainResult }],
+    perfil: [ETAPA_IMP, { ...ETAPA_CLIQUE, rotulo: 'clicaram no anúncio' },
+        { key: 'visitas', nome: 'Visitas ao perfil', rotulo: 'visitaram o perfil', get: c => c.mainResult },
+        { key: 'followers', nome: 'Seguidores', rotulo: 'passaram a seguir', get: c => c.followers }],
+    trafego: [ETAPA_IMP, ETAPA_CLIQUE, { key: 'lpv', nome: 'Visualizações da página', rotulo: 'chegaram ao site', get: c => c.lpv }],
+    engajamento: [ETAPA_IMP, { key: 'engagement', nome: 'Engajamentos', rotulo: 'interagiram com o anúncio', get: c => c.engagement || c.mainResult }],
+    alcance: [], // reconhecimento não tem Funil: o resultado é o próprio alcance
+    outro: [ETAPA_IMP, ETAPA_CLIQUE, { key: 'resultado', nome: 'Resultados', rotulo: 'tiveram o resultado', get: c => c.mainResult }]
+};
+
+// Funil de um Objetivo. agg e base são agregados do mesmo Objetivo (base pode ser null). Devolve null se sobrar menos de 2 etapas.
+function montarFunil(agg, base = null) {
+    if (!agg) return null;
+    const defs = FUNIL_ETAPAS[agg.tipo || agg.type] || [];
+    const valor = (c, d) => { const v = c ? d.get(c) : null; return v > 0 ? v : null; };
+    const etapas = defs.map(d => ({ ...d, valor: valor(agg, d), valorBase: valor(base, d) })).filter(e => e.valor != null);
+    if (etapas.length < 2) return null;
+    etapas.forEach((e, i) => {
+        const ant = etapas[i - 1];
+        e.taxa = ant ? (e.valor / ant.valor) * 100 : null;
+        // A taxa de comparação só existe se as duas etapas existem na base
+        e.taxaBase = ant && e.valorBase != null && ant.valorBase != null ? (e.valorBase / ant.valorBase) * 100 : null;
+        e.varPP = e.taxa != null && e.taxaBase != null ? e.taxa - e.taxaBase : null;
+        delete e.get;
+    });
+    const primeira = etapas[0], ultima = etapas[etapas.length - 1];
+    // "Onde mais se perde" ignora o primeiro passo (exibição → clique), que sempre perde quase todos
+    const passos = etapas.slice(2);
+    const perda = passos.length ? passos.reduce((a, b) => ((100 - b.taxa) > (100 - a.taxa) ? b : a)) : null;
+    const pior = etapas.filter(e => e.varPP != null).reduce((a, b) => (!a || b.varPP < a.varPP ? b : a), null);
+    return {
+        tipo: agg.tipo || agg.type, etapas, geral: ultima.valor > 0 ? primeira.valor / ultima.valor : null,
+        maiorPerda: perda ? { etapa: perda, de: etapas[etapas.indexOf(perda) - 1], perda: 100 - perda.taxa } : null,
+        piorou: pior && pior.varPP < 0 ? { etapa: pior, de: etapas[etapas.indexOf(pior) - 1] } : null
+    };
+}
+function funisDe(comp) {
+    const out = {};
+    for (const o of comp.objetivos) { const f = montarFunil(o.atual, o.base); if (f) out[o.tipo] = f; }
+    return out;
+}
+
+// ---------- Formatação curta para Manchetes e Destaques ----------
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+const fmtNum = (v, d) => v.toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
+// 67.911 -> "67,9 mil"; 1.200.000 -> "1,2 mi"; 40 -> "40"
+function numCurto(v) {
+    if (v >= 1e6) return fmtNum(v / 1e6, 1).replace(/,0$/, '') + ' mi';
+    if (v >= 1e4) return fmtNum(v / 1e3, 1).replace(/,0$/, '') + ' mil';
+    return fmtNum(Math.round(v), 0);
+}
+const pctCurto = v => fmtNum(Math.abs(v), Math.abs(v) < 10 ? 1 : 0).replace(/,0$/, '');
+const ppTxt = v => fmtNum(Math.abs(v), 1) + ' p.p.';
+const brlInt = v => 'R$ ' + fmtNum(Math.round(v), 0);
+
+// Como chamar o Período de comparação numa frase ("setembro", "o período anterior")
+function nomeRef(comp) {
+    if (!comp.comparacao) return null;
+    const m = nomeDoMes(comp.comparacao.start, comp.comparacao.end);
+    return m ? m.toLowerCase() : 'o período de comparação';
+}
+
+// ---------- Destaques (regras, sem IA) ----------
+// metas: resultado de avaliarMeta [{ atingida, resumo }]; funis: funisDe(comp)
+function gerarDestaques(comp, { metas = [], funis = null } = {}) {
+    funis = funis || funisDe(comp);
+    const ref = nomeRef(comp);
+    const out = [];
+    const que = ref ? (ref.startsWith('o ') ? ref : 'em ' + ref) : null;
+
+    // 1. Maior variação do Custo por Resultado
+    if (comp.comparacao) {
+        const cand = comp.objetivos.filter(o => o.var.costPerResult.pct != null && o.tipo !== 'alcance');
+        const o = cand.reduce((a, b) => (!a || Math.abs(b.var.costPerResult.pct) > Math.abs(a.var.costPerResult.pct) ? b : a), null);
+        if (o && Math.abs(o.var.costPerResult.pct) >= 3) {
+            const v = o.var.costPerResult, txt = RESULTADO_TXT[o.tipo];
+            out.push({ regra: 'custo', id: 'custo-' + o.tipo, texto: `Cada ${txt.sing} custou ${brl(v.atual)} (${o.label}), ${pctCurto(v.pct)}% ${v.dir === 'down' ? 'menos' : 'mais'} que ${que}.` });
+        }
+    }
+    // 2. Metas atingidas ou não (as não atingidas primeiro)
+    [...metas].filter(m => m.atingida != null).sort((a, b) => Number(a.atingida) - Number(b.atingida)).slice(0, 2)
+        .forEach((m, i) => out.push({ regra: 'meta', id: 'meta-' + i, texto: m.resumo }));
+    // 3. Campanha que mais cresceu
+    if (comp.comparacao) {
+        const total = comp.analisado.total.spend;
+        const novas = comp.campanhas.filter(c => c.estado === 'nova' && c.atual && c.atual.spend > 0 && total > 0 && c.atual.spend / total >= 0.1);
+        const cresc = comp.campanhas.filter(c => c.estado === 'mantida' && c.var.spend.pct != null && c.var.spend.delta > 0 && c.var.spend.pct >= 20);
+        const c = cresc.reduce((a, b) => (!a || b.var.spend.delta > a.var.spend.delta ? b : a), null);
+        const n = novas.reduce((a, b) => (!a || b.atual.spend > a.atual.spend ? b : a), null);
+        if (n && (!c || n.atual.spend > c.atual.spend)) out.push({ regra: 'campanha', id: 'campanha-nova', texto: `A campanha nova “${n.nome}” já responde por ${pctCurto(ratePct(n.atual.spend, total))}% do investimento.` });
+        else if (c) out.push({ regra: 'campanha', id: 'campanha-cresceu', texto: `A campanha “${c.nome}” foi a que mais cresceu: ${pctCurto(c.var.spend.pct)}% a mais de investimento${c.var.spend.porDia ? ' por dia' : ''}.` });
+    }
+    // 4. Etapa do Funil que mais piorou
+    const piores = Object.values(funis).filter(f => f.piorou).map(f => ({ f, v: f.piorou.etapa.varPP })).sort((a, b) => a.v - b.v);
+    if (piores.length) {
+        const { f } = piores[0], e = f.piorou.etapa, d = f.piorou.de;
+        out.push({ regra: 'funil', id: 'funil-' + f.tipo, texto: `No funil de ${TYPES[f.tipo].label}, a passagem de quem ${d.rotulo} para quem ${e.rotulo} piorou ${ppTxt(e.varPP)}: de ${pct(e.taxaBase, 1)} para ${pct(e.taxa, 1)}.` });
+    }
+    return out;
+}
+
+// ---------- Manchetes automáticas ----------
+// O texto usa [[...]] para a ênfase colorida; o Relatório troca por <em>.
+function mancheteResumo(comp) {
+    const obj = comp.objetivos.filter(o => o.atual && o.atual.mainResult > 0 && o.tipo !== 'alcance');
+    const gasto = comp.analisado.total.spend;
+    if (!obj.length) return `Foram [[${brlInt(gasto)}]] investidos no período.`;
+    const p = obj[0];
+    if (!comp.comparacao || p.var.costPerResult.pct == null) return `Foram [[${brlInt(gasto)}]] investidos e [[${numCurto(p.atual.mainResult)}]] ${RESULTADO_TXT[p.tipo].plur} chegaram.`;
+    const frase = (o, artigo) => {
+        const v = o.var.costPerResult, t = RESULTADO_TXT[o.tipo].custo;
+        if (Math.abs(v.pct) < 3) return `${artigo} ${t} ficou estável em [[${brlInt(v.atual)}]]`;
+        return `${artigo} ${t} ${v.dir === 'down' ? 'caiu' : 'subiu'} [[${pctCurto(v.pct)}%]]`;
+    };
+    const seg = obj.slice(1).find(o => o.var.costPerResult.pct != null);
+    return (seg ? `${frase(p, 'O')} e ${frase(seg, 'o')}` : frase(p, 'O')) + '.';
+}
+function ledeResumo(comp) {
+    const mes = nomeDoMes(comp.analisado.start, comp.analisado.end) || 'O período';
+    const ref = nomeRef(comp);
+    const v = comp.total.spend;
+    if (!ref || v.pct == null || v.dir === 'flat') return `${mes} somou ${brl(comp.analisado.total.spend)} em anúncios.`;
+    return `${mes} investiu ${pctCurto(v.pct)}% ${v.dir === 'down' ? 'menos' : 'mais'}${v.porDia ? ' por dia' : ''} que ${ref}.`;
+}
+function ledeCapa(comp) {
+    const a = comp.analisado;
+    const partes = comp.objetivos.filter(o => o.atual && o.atual.mainResult > 0 && o.tipo !== 'alcance').slice(0, 2)
+        .map(o => `${int(o.atual.mainResult)} ${RESULTADO_TXT[o.tipo].plur}`);
+    let s = `Foram investidos ${brl0(a.total.spend)} em anúncios` + (partes.length ? `, com ${partes.join(' e ')}.` : '.');
+    const v = a.porObjetivo.ecommerce;
+    if (v && v.roas != null) s += ` Para cada real em anúncios de venda, voltaram ${fmtNum(v.roas, 2)}.`;
+    return s;
+}
+function mancheteFunil(f) {
+    const a = f.etapas[0], z = f.etapas[f.etapas.length - 1];
+    return `De [[${numCurto(a.valor)}]] exibições a [[${numCurto(z.valor)}]] ${RESULTADO_TXT[f.tipo].plur}.`;
+}
+// Evolução do Resultado do principal Objetivo ao longo do Lote
+function mancheteEvolucao(comp, evo) {
+    const o = comp.objetivos.find(x => x.atual && x.atual.mainResult > 0 && x.tipo !== 'alcance');
+    if (!o || !evo) return 'A evolução do período, mês a mês.';
+    const s = serieEvolucao(evo, o.tipo, 'mainResult');
+    const pts = s.pontos.filter(p => p.valor != null && p.valor > 0);
+    if (pts.length < 2) return 'A evolução do período, mês a mês.';
+    const f = v => (s.porDia ? fmtNum(v, 1) : numCurto(v));
+    return `Em ${pts.length} períodos, ${RESULTADO_TXT[o.tipo].plur}${s.porDia ? ' por dia' : ''} foram de [[${f(pts[0].valor)}]] para [[${f(pts[pts.length - 1].valor)}]].`;
+}
+function mancheteMetas(metas) {
+    const m = metas.filter(x => x.atingida != null);
+    const ok = m.filter(x => x.atingida).length;
+    if (!m.length) return 'Metas do período.';
+    if (ok === m.length) return m.length === 1 ? 'A Meta foi [[batida]].' : `As ${m.length} Metas foram [[batidas]].`;
+    if (ok === 0) return m.length === 1 ? 'A Meta [[não foi atingida]] neste período.' : `Nenhuma das ${m.length} Metas foi [[atingida]] neste período.`;
+    return `${ok} de ${m.length} Metas foram [[atingidas]].`;
+}
+function mancheteEncerramento(comp) {
+    const mes = nomeDoMes(comp.analisado.start, comp.analisado.end);
+    return `O que ${mes ? '[[' + mes + ']]' : 'o [[período]]'} mostrou e o que fazemos [[agora]].`;
+}
+function gerarManchetes(comp, { evo = null, metas = [], funis = null } = {}) {
+    funis = funis || funisDe(comp);
+    return {
+        resumo: mancheteResumo(comp), lede: ledeResumo(comp), capa: ledeCapa(comp),
+        funil: Object.fromEntries(Object.values(funis).map(f => [f.tipo, mancheteFunil(f)])),
+        evolucao: mancheteEvolucao(comp, evo), metas: mancheteMetas(metas), encerramento: mancheteEncerramento(comp)
+    };
+}
+// #testavel:fim
+
 // ---------- Análise ----------
 function status(value, bm) {
     if (value == null || !bm) return 'none';
