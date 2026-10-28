@@ -98,3 +98,43 @@ test('CSVs reais: o Relatório sai completo, sem NaN, com os dados do Lote', com
   assert.match(html, /Relatório<br>de <span>Outubro<\/span>/);
   assert.match(html, /1 a 19 out 2026/);
 }));
+
+// ---- Relatório do Gestor ----
+const recs = [{ label: 'Vendas (site)', resumo: '1 campanha · R$ 1.300', recs: [{ priority: 'high', title: 'Poucos visitantes adicionam ao carrinho', area: '🖱️ Página de produto', desc: 'd', evidence: 'e', impact: '', steps: ['a', 'b'] }] }];
+
+test('Gestor: acrescenta rosca, tabela completa, heatmap e recomendações ao Relatório do Cliente', () => {
+  const ps = [AGO(), SET(), OUT()];
+  const cliente = relatorioHTML(modelo(ps, { comentario: 'x' }));
+  const gestor = relatorioHTML(modelo(ps, { comentario: 'x', versao: 'gestor', extra: { recs, overrides: {} } }));
+  assert.equal(pags(gestor), pags(cliente) + 4);
+  assert.ok(!/NaN|undefined|\{\{n\}\}/.test(gestor));
+  assert.match(gestor, /Gestor \(técnica\)/);
+  assert.match(gestor, /<circle [^>]*stroke-dasharray/); // rosca
+  assert.match(gestor, /Tabela completa por campanha/);
+  assert.match(gestor, /<th>CPM<\/th>/); assert.match(gestor, /<th>CTR<\/th>/); assert.match(gestor, /Freq\./);
+  assert.match(gestor, /class="heat"/);
+  assert.match(gestor, /Poucos visitantes adicionam ao carrinho/);
+  // o Cliente não traz jargão técnico
+  assert.ok(!/CPM|CTR|Frequência/.test(cliente.replace(/<style>[\s\S]*?<\/style>/, '')));
+  // encerramento continua por último
+  assert.ok(gestor.lastIndexOf('Até o próximo') > gestor.lastIndexOf('class="heat"'));
+});
+
+test('Gestor: tabela completa quebra em várias páginas e o heatmap vira diário quando o CSV tem dias', () => {
+  const muitas = Array.from({ length: 30 }, (_, i) => venda('Campanha ' + i, 100 + i, { imp: 1000, clicks: 30, atc: 5, checkout: 3, purchases: 2 }));
+  const ps = [periodo('s', '2026-09-01', '2026-09-30', muitas), periodo('o', '2026-10-01', '2026-10-31', muitas)];
+  const g = relatorioHTML(modelo(ps, { versao: 'gestor', extra: { recs: [], overrides: {} } }));
+  assert.match(g, /1 de 3/);
+  assert.match(g, /Nenhuma etapa do Funil ficou/);
+  const dias = periodo('d', '2026-10-01', '2026-10-03', [{ ...venda('V', 100, { imp: 1000, clicks: 30, purchases: 2 }), start: '2026-10-01', end: '2026-10-01' }, { ...venda('V', 90, { imp: 1000, clicks: 30, purchases: 3 }), start: '2026-10-02', end: '2026-10-02' }]);
+  const gd = relatorioHTML(modelo([periodo('b', '2026-09-01', '2026-09-30', muitas.slice(0, 1)), dias], { versao: 'gestor', extra: { recs: [], overrides: {} } }));
+  assert.match(gd, /campanha × dia/);
+  assert.match(gd, /<th>01\/10<\/th>/);
+});
+
+test('CSVs reais: o Relatório do Gestor sai completo', comArquivo(OFFRIO && RECRIE && REFORMER, () => {
+  const ps = assembleLote([OFFRIO, REFORMER, RECRIE].map((t, i) => ({ ...parseReport(t), fileName: ['offrio', 'reformer', 'recrie'][i] }))).periods;
+  const html = relatorioHTML(modelo(ps, { comentario: 'x', versao: 'gestor', extra: { recs, overrides: {} } }));
+  assert.ok(!/NaN|undefined|Infinity|\{\{n\}\}/.test(html));
+  assert.match(html, /class="heat"/);
+}));

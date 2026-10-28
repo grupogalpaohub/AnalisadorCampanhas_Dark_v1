@@ -345,6 +345,7 @@ input[type=text]:focus, select:focus { outline: none; border-color: var(--megama
 <div id="rel" hidden>
     <div class="rel-bar">
         <button class="btn btn-sm btn-outline" id="rel-voltar">← Comparativo</button>
+        <div class="rel-versoes" role="group" aria-label="Versão do Relatório"><button class="btn btn-sm btn-outline" data-versao="cliente">Cliente</button><button class="btn btn-sm btn-outline" data-versao="gestor">Gestor</button></div>
         <div class="rel-titulo">Prévia do Relatório <span class="muted">· clique nos títulos e Destaques para editar</span></div>
         <div class="rel-acoes">
             <button class="btn btn-sm btn-outline" id="rel-reset">Restaurar textos</button>
@@ -1481,6 +1482,7 @@ function paginaCapa(m) {
       <div>Período analisado<b>${esc(faixaTexto(a.start, a.end))}</b></div>
       <div>Comparado com<b>${c.comparacao ? esc(faixaTexto(c.comparacao.start, c.comparacao.end)) : '—'}</b></div>
       <div>Plataforma<b>${esc(plataformaTxt(m))}</b></div>
+      ${m.versao === 'gestor' ? '<div>Versão<b>Gestor (técnica)</b></div>' : ''}
     </div>
   </div>
 </section>`;
@@ -1693,6 +1695,151 @@ function paginaEncerramento(m) {
 </section>`;
 }
 
+// ---- Páginas extras do Relatório do Gestor: rosca, tabela completa, heatmap e recomendações ----
+const REL_CSS_GESTOR = `
+.donut-wrap{display:grid;grid-template-columns:62mm 1fr;gap:8mm;align-items:center;margin-top:8mm}
+.donut-leg{display:grid;gap:3mm}
+.donut-leg div{display:grid;grid-template-columns:4mm 1fr auto;gap:3mm;align-items:center;font-size:9.5pt;font-weight:600}
+.donut-leg i{width:4mm;height:4mm;border-radius:2px;display:block}
+.donut-leg small{display:block;font:600 7.5pt Manrope;color:var(--ink-3)}
+.tbl-full{table-layout:fixed;font-size:7.4pt}
+.tbl-full th{font-size:6.8pt}
+.tbl-full th,.tbl-full td{padding:2mm 0 2mm 1.2mm}
+.tbl-full th:first-child,.tbl-full td:first-child{padding-left:0}
+.tbl-full td:first-child{font-size:7.4pt;line-height:1.25;word-break:break-word}
+.tbl-full .ok{color:#1F7A24}.tbl-full .ruim{color:#A83232}
+.heat{width:100%;border-collapse:separate;border-spacing:1.1mm;margin-top:2mm;font-size:7pt}
+.heat th{padding:1mm 0;border:0;text-align:center;font-size:6.8pt}
+.heat th:first-child{text-align:left}
+.heat td{height:6.8mm;border-radius:4px;text-align:center;font-weight:700;padding:0;border:0;color:#2a3b47}
+.heat td:first-child{text-align:left;background:none;border-radius:0;font-size:7pt;line-height:1.2;color:var(--ink);padding-right:2mm;width:58mm}
+.heat tr.grupo td{height:auto;padding:3mm 0 0;font:700 7.5pt Ubuntu;color:var(--aqua);background:none;text-align:left;letter-spacing:.04em;text-transform:uppercase}
+.heat-leg{display:flex;align-items:center;gap:3mm;font-size:7.5pt;color:var(--ink-3);margin-top:3mm}
+.heat-leg i{display:block;width:40mm;height:3mm;border-radius:2px;background:linear-gradient(90deg,#BFE9C1,#F4EBDD,#F2A7A7)}
+.rec{border:1px solid var(--sand-line);border-radius:var(--r-md);padding:3.5mm 5mm;background:#fff;margin-top:3mm}
+.rec h4{font:700 9.5pt Ubuntu;display:flex;gap:2mm;align-items:center;flex-wrap:wrap}
+.rec .area{font:600 7.5pt Manrope;color:var(--ink-3)}
+.rec .prio{font:700 7pt Manrope;padding:1px 7px;border-radius:99px;background:#FBE1E1;color:#A83232}
+.rec .prio.medium{background:#F8EBC4;color:#8A6A12}
+.rec p{font-size:8.5pt;line-height:1.4;color:var(--ink-2);margin-top:1.5mm}
+.rec ol{margin:1.5mm 0 0 4mm;font-size:8.3pt;line-height:1.4;color:var(--ink-2)}
+.grupo-h{font:700 10.5pt Ubuntu;margin-top:6mm;display:flex;justify-content:space-between;align-items:baseline}
+.grupo-h small{font:600 8pt Manrope;color:var(--ink-3)}
+`;
+const CORES_OBJ = ['#003F61', '#0D6DA0', '#45BDFE', '#89D5FE', '#E6C364', '#8A6A12', '#6B8090', '#3C5466'];
+
+function rosca(fatias, totalTxt) {
+    const R = 70, C = 2 * Math.PI * R, total = fatias.reduce((s, f) => s + f.valor, 0);
+    let acc = 0;
+    const arcos = fatias.map(f => { const len = total > 0 ? f.valor / total * C : 0, seg = `<circle cx="100" cy="100" r="${R}" fill="none" stroke="${f.cor}" stroke-width="30" stroke-dasharray="${len.toFixed(2)} ${(C - len).toFixed(2)}" stroke-dashoffset="${(-acc).toFixed(2)}" transform="rotate(-90 100 100)"/>`; acc += len; return seg; }).join('');
+    return `<svg viewBox="0 0 200 200" width="100%" aria-label="Investimento por Objetivo"><circle cx="100" cy="100" r="${R}" fill="none" stroke="#F1E8DA" stroke-width="30"/>${arcos}
+      <text x="100" y="98" text-anchor="middle" font-family="Ubuntu" font-weight="700" font-size="17" fill="#00131D">${esc(totalTxt)}</text><text x="100" y="116" text-anchor="middle" font-family="Manrope" font-weight="600" font-size="9" fill="#6B8090">investidos</text></svg>`;
+}
+function paginaRosca(m) {
+    const c = m.comp, A = c.analisado;
+    const objs = c.objetivos.filter(o => o.atual && o.atual.spend > 0);
+    const fatias = objs.map((o, i) => ({ valor: o.atual.spend, cor: CORES_OBJ[i % CORES_OBJ.length], o }));
+    const top = objs[0];
+    const mancheteAuto = top ? `[[${pctCurto(top.participacao)}%]] do investimento foi para [[${nomeCurtoObj(top.tipo)}]].` : 'Para onde foi o investimento.';
+    const leg = fatias.map(f => `<div><i style="background:${f.cor}"></i><span>${esc(f.o.label)}<small>${f.o.atual.nCampanhas} campanha${f.o.atual.nCampanhas !== 1 ? 's' : ''}</small></span><b>${brl0(f.valor)} · ${pctCurto(f.o.participacao)}%</b></div>`).join('');
+    const linhas = objs.map(o => { const a = o.atual; return `<tr><td>${esc(o.label)}</td><td>${brl0(a.spend)}</td><td>${brl(a.cpm)}</td><td>${pct(a.ctr, 2)}</td><td>${a.frequency ? fmtNum(a.frequency, 2) : '—'}</td><td>${a.mainResult != null ? int(a.mainResult) + ' ' + esc(RESULTADO_TXT[o.tipo].plur) : '—'}</td><td>${a.costPerResult != null ? brl(a.costPerResult) : '—'}</td></tr>`; }).join('');
+    return `<section class="page">
+  ${run(m, 'Investimento por Objetivo')}
+  ${editavel('h2', 'g.rosca', textoDe(m, 'g.rosca', mancheteAuto), 'headline')}
+  <p class="lede">Como o investimento de ${esc(faixaTexto(A.start, A.end))} se dividiu entre os Objetivos das campanhas, com os números técnicos de cada um.</p>
+  <div class="donut-wrap">${rosca(fatias, brl0(A.total.spend))}<div class="donut-leg">${leg}</div></div>
+  <div class="panel"><h3>Números técnicos por Objetivo <small>${esc(plataformaTxt(m))}</small></h3>
+    <table class="tbl-full"><thead><tr><th>Objetivo</th><th>Investimento</th><th>CPM</th><th>CTR</th><th>Frequência</th><th>Resultado</th><th>Custo por resultado</th></tr></thead><tbody>${linhas}</tbody></table>
+    <p class="lede" style="margin-top:3mm;font-size:8pt">Frequência só aparece quando o Objetivo tem uma campanha: o alcance de campanhas diferentes não se soma.</p></div>
+  ${foot('Relatório do Gestor · Investimento por Objetivo')}
+</section>`;
+}
+
+function paginasTabela(m) {
+    const A = m.comp.analisado, lista = A.campanhas.filter(k => k.spend > 0 || k.impressions > 0).sort((a, b) => b.spend - a.spend);
+    const porNome = new Map(m.comp.campanhas.map(k => [k.nome, k]));
+    const POR = 14, grupos = [];
+    for (let i = 0; i < lista.length; i += POR) grupos.push(lista.slice(i, i + POR));
+    if (!grupos.length) grupos.push([]);
+    return grupos.map((g, gi) => `<section class="page">
+  ${run(m, 'Tabela completa por campanha')}
+  ${editavel('h2', 'g.tabela' + (gi ? '.' + gi : ''), textoDe(m, 'g.tabela' + (gi ? '.' + gi : ''), gi ? 'Todas as campanhas (continuação).' : `Todas as [[${lista.length} campanhas]], uma a uma.`), 'headline')}
+  <p class="lede">${gi ? 'Continuação da tabela.' : 'Os números técnicos de cada campanha. CPM, CTR e frequência vêm direto da plataforma; a variação é do custo por resultado contra o período de comparação.'}</p>
+  <div class="panel"><table class="tbl-full"><colgroup><col style="width:46mm"><col style="width:17mm"><col style="width:16mm"><col style="width:13mm"><col style="width:12mm"><col style="width:11mm"><col style="width:17mm"><col style="width:17mm"><col style="width:12mm"></colgroup>
+    <thead><tr><th>Campanha</th><th>Investimento</th><th>Impressões</th><th>CPM</th><th>CTR</th><th>Freq.</th><th>Resultado</th><th>Custo/result.</th><th>ROAS</th></tr></thead>
+    <tbody>${g.map(k => { const kk = porNome.get(k.nome), v = kk && kk.var.costPerResult;
+        const tag = [nomeCurtoObj(k.tipo), kk && kk.estado === 'nova' ? 'nova' : null, kk && kk.estado === 'mantida' && kk.ciclo.encerrada ? 'encerra antes do fim do Lote' : null, k.ativa ? null : 'inativa'].filter(Boolean).join(' · ');
+        const dv = v && v.pct != null && v.dir !== 'flat' ? ` <span class="${v.bom ? 'ok' : 'ruim'}">${v.dir === 'up' ? '▲' : '▼'}${pctCurto(v.pct)}%</span>` : '';
+        return `<tr><td>${esc(k.nome)}<span class="tag">${esc(tag)}</span></td><td>${brl(k.spend)}</td><td>${int(k.impressions)}</td><td>${k.cpm != null ? brl(k.cpm) : '—'}</td><td>${k.ctr != null ? pct(k.ctr, 2) : '—'}</td><td>${k.frequency ? fmtNum(k.frequency, 2) : '—'}</td>
+          <td>${k.mainResult != null ? int(k.mainResult) : '—'}<span class="tag">${esc(k.mainResult === 1 ? RESULTADO_TXT[k.tipo].sing : RESULTADO_TXT[k.tipo].plur)}</span></td><td>${k.costPerResult != null ? brl(k.costPerResult) : '—'}${dv}</td><td>${k.tipo === 'ecommerce' && k.roas != null ? fmtNum(k.roas, 1) + '×' : '—'}</td></tr>`; }).join('')}</tbody></table></div>
+  ${foot('Relatório do Gestor · Tabela completa · ' + (gi + 1) + ' de ' + grupos.length)}
+</section>`);
+}
+
+const mixHex = (a, b, t) => { const h = s => [1, 3, 5].map(k => parseInt(s.slice(k, k + 2), 16)); const x = h(a), y = h(b); return '#' + x.map((v, k) => Math.round(v + (y[k] - v) * t).toString(16).padStart(2, '0')).join(''); };
+const corHeat = t => t < 0.5 ? mixHex('#BFE9C1', '#F4EBDD', t * 2) : mixHex('#F4EBDD', '#F2A7A7', (t - 0.5) * 2);
+function paginaHeatmap(m) {
+    const mat = matrizCustoPorResultado(m.periods, m.overrides || {});
+    if (!mat.linhas.length) return [];
+    const ncol = mat.rotulos.length, mostra = ncol <= 12;
+    // A escala de cor é por Objetivo: custo por conversa e custo por compra não se comparam
+    const faixa = {};
+    for (const l of mat.linhas) for (const v of l.valores) if (v != null) { const f = faixa[l.tipo] || (faixa[l.tipo] = { min: v, max: v }); f.min = Math.min(f.min, v); f.max = Math.max(f.max, v); }
+    const tipos = [...new Set(mat.linhas.map(l => l.tipo))].sort((a, b) => (m.comp.analisado.porObjetivo[b]?.spend || 0) - (m.comp.analisado.porObjetivo[a]?.spend || 0));
+    const LIM = 22;
+    let linhas = '', n = 0, cortadas = 0;
+    for (const t of tipos) {
+        const doTipo = mat.linhas.filter(l => l.tipo === t);
+        let abriu = false;
+        for (const l of doTipo) {
+            if (n >= LIM) { cortadas++; continue; }
+            if (!abriu) { linhas += `<tr class="grupo"><td colspan="${ncol + 1}">${esc(TYPES[t].label)} · custo por ${esc(RESULTADO_TXT[t].sing)}</td></tr>`; abriu = true; }
+            const f = faixa[t];
+            linhas += `<tr><td>${esc(l.nome.length > 58 ? l.nome.slice(0, 57) + '…' : l.nome)}</td>${l.valores.map(v => v == null ? '<td style="background:none;border:1px dashed #E7DCCB;color:#C9BBA6;font-weight:600">—</td>'
+                : `<td style="background:${corHeat(f.max > f.min ? (v - f.min) / (f.max - f.min) : 0.5)}">${mostra ? esc(brl(v).replace('R$ ', '')) : ''}</td>`).join('')}</tr>`;
+            n++;
+        }
+    }
+    const rot = mat.diario ? mat.rotulos.map(r => r.slice(8, 10) + '/' + r.slice(5, 7)) : mat.rotulos;
+    return [`<section class="page">
+  ${run(m, 'Custo por resultado: campanha × ' + (mat.diario ? 'dia' : 'período'))}
+  ${editavel('h2', 'g.heat', textoDe(m, 'g.heat', mat.diario ? 'Custo por resultado de cada campanha, [[dia a dia]].' : 'Custo por resultado de cada campanha, [[período a período]].'), 'headline')}
+  <p class="lede">Quanto mais verde, mais barato o resultado em relação às outras células do mesmo Objetivo; quanto mais vermelho, mais caro. Células cinza: a campanha não rodou.${mat.diario ? '' : ' Os CSVs deste Lote não têm quebra por dia, então cada coluna é um período.'}</p>
+  <div class="panel"><table class="heat"><thead><tr><th>Campanha</th>${rot.map(r => `<th>${esc(r)}</th>`).join('')}</tr></thead><tbody>${linhas}</tbody></table>
+    <div class="heat-leg"><span>mais barato</span><i></i><span>mais caro</span>${cortadas ? `<span>· ${cortadas} campanha${cortadas !== 1 ? 's' : ''} fora desta página, por falta de espaço</span>` : ''}</div></div>
+  ${foot('Relatório do Gestor · Heatmap · valores em R$')}
+</section>`];
+}
+
+function paginasRecomendacoes(m) {
+    const grupos = (m.recs || []).filter(g => g.recs.length);
+    const itens = [];
+    for (const g of grupos) for (const r of g.recs.slice(0, 3)) itens.push({ g, r });
+    if (!itens.length) return [`<section class="page">
+  ${run(m, 'Recomendações da análise')}
+  ${editavel('h2', 'g.recs', textoDe(m, 'g.recs', 'Nenhuma etapa do Funil ficou [[abaixo do benchmark]].'), 'headline')}
+  <p class="lede">As recomendações automáticas aparecem quando alguma etapa do Funil fica abaixo da média de referência da plataforma.</p>
+  ${foot('Relatório do Gestor · Recomendações')}</section>`];
+    const POR = 5, pags = [];
+    for (let i = 0; i < itens.length; i += POR) pags.push(itens.slice(i, i + POR));
+    return pags.map((pg, pi) => {
+        let ultimo = null;
+        const corpo = pg.map(({ g, r }) => {
+            const cab = g !== ultimo ? `<div class="grupo-h">${esc(g.label)}<small>${esc(g.resumo)}</small></div>` : ''; ultimo = g;
+            return `${cab}<div class="rec"><h4>${esc(r.title)} <span class="prio ${r.priority}">${r.priority === 'high' ? 'Alta' : 'Média'}</span> <span class="area">${esc(String(r.area).replace(/^\S+\s/, ''))}</span></h4>
+              <p>${esc(r.desc)} ${esc(r.evidence)} ${esc(r.impact || '')}</p><ol>${r.steps.slice(0, 3).map(s => `<li>${esc(s)}</li>`).join('')}</ol></div>`;
+        }).join('');
+        return `<section class="page">
+  ${run(m, 'Recomendações da análise')}
+  ${editavel('h2', 'g.recs' + (pi ? '.' + pi : ''), textoDe(m, 'g.recs' + (pi ? '.' + pi : ''), pi ? 'Recomendações (continuação).' : `Onde agir primeiro: [[${itens.length} recomendações]] por prioridade.`), 'headline')}
+  <p class="lede">${pi ? 'Continuação.' : 'Sugestões automáticas a partir do Funil de cada Objetivo e dos benchmarks da plataforma, ordenadas da maior para a menor prioridade.'}</p>
+  ${corpo}
+  ${foot('Relatório do Gestor · Recomendações · ' + (pi + 1) + ' de ' + pags.length)}
+</section>`;
+    });
+}
+const paginasGestor = m => [paginaRosca(m), ...paginasTabela(m), ...paginaHeatmap(m), ...paginasRecomendacoes(m)];
+
 // CSS extra: edição só na tela; o que não é conteúdo some na impressão
 const REL_CSS_EXTRA = `
 .page em{font-style:normal}
@@ -1707,12 +1854,12 @@ td:not(:first-child),th:not(:first-child){padding-left:3mm}
 // Monta o documento completo do Relatório. model: ver modeloRelatorio() na aplicação.
 function relatorioHTML(m) {
     const funis = m.comp.objetivos.filter(o => m.funis[o.tipo] && o.atual).slice(0, 2).map(o => m.funis[o.tipo]);
-    const paginas = [paginaCapa(m), paginaResumo(m), ...funis.map((f, i) => paginaFunil(m, f, i)), paginaEvolucao(m), ...paginasMetas(m), ...(m.paginasExtras ? m.paginasExtras(m) : []), paginaEncerramento(m)];
+    const paginas = [paginaCapa(m), paginaResumo(m), ...funis.map((f, i) => paginaFunil(m, f, i)), paginaEvolucao(m), ...paginasMetas(m), ...(m.versao === 'gestor' ? paginasGestor(m) : []), paginaEncerramento(m)];
     const corpo = paginas.map((p, i) => p.replace(/\{\{n\}\}/g, String(i + 1))).join('\n');
     return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${esc(m.nomeArquivo || 'Relatório')}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<style>${REL_CSS}${REL_CSS_EXTRA}${m.cssExtra || ''}</style></head><body>
+<style>${REL_CSS}${REL_CSS_EXTRA}${m.versao === 'gestor' ? REL_CSS_GESTOR : ''}</style></head><body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>${REL_LOGO_SYMBOL}
 <linearGradient id="gFunnel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#45BDFE"/><stop offset="1" stop-color="#003F61"/></linearGradient>
 <linearGradient id="gCover" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#45BDFE" stop-opacity=".9"/><stop offset="1" stop-color="#003F61" stop-opacity=".2"/></linearGradient>
@@ -2548,7 +2695,7 @@ function salvarRascunho() {
 }
 function nomeArquivoPDF() {
     const a = state.comp.analisado, mes = nomeDoMes(a.start, a.end);
-    return `${perfilAtual().nome}_${mes ? mes + '-' + a.start.slice(0, 4) : a.start + '_a_' + a.end}`.replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, '_');
+    return `${perfilAtual().nome}_${mes ? mes + '-' + a.start.slice(0, 4) : a.start + '_a_' + a.end}${state.rel && state.rel.versao === 'gestor' ? '_Gestor' : ''}`.replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, '_');
 }
 function modeloRelatorio() {
     const c = dadosComparativo(), p = perfilAtual();
@@ -2556,8 +2703,10 @@ function modeloRelatorio() {
     const m = {
         versao: state.rel.versao, comp: c, evo: state.evo, periods: state.lote.periods, perfil: { nome: p.nome, logo: p.logo }, plataforma: state.lote.platform,
         metas, funis, destaques: gerarDestaques(c, { metas, funis }), manchetes: gerarManchetes(c, { evo: state.evo, metas, funis }),
-        textos: state.rel.textos, comentario: state.rel.comentario, passos: state.rel.passos, nomeArquivo: nomeArquivoPDF()
+        textos: state.rel.textos, comentario: state.rel.comentario, passos: state.rel.passos, nomeArquivo: nomeArquivoPDF(), overrides: ajustesAtuais()
     };
+    // Recomendações da V2: o Funil de cada Objetivo contra os benchmarks da plataforma
+    if (m.versao === 'gestor') m.recs = c.objetivos.filter(o => o.atual).map(o => ({ label: o.label, resumo: `${o.atual.nCampanhas} campanha${o.atual.nCampanhas !== 1 ? 's' : ''} · ${brl(o.atual.spend)}`, recs: analyze(o.atual).recs }));
     return m;
 }
 
