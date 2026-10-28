@@ -191,6 +191,19 @@ tbody tr:hover { background: rgba(69,189,254,.08); }
 .type-select option { background: var(--navy-2); }
 .type-select.manual { border-color: var(--gold); color: var(--gold); }
 .type-select:focus { outline: none; border-color: var(--megaman); }td.num { white-space: nowrap; }
+
+/* Perfil do Cliente */
+.form-grid { display: grid; gap: .9rem; }
+.form-grid label, .meta-row label { display: grid; gap: .3rem; font-size: 13px; font-weight: 600; color: var(--muted); }
+input[type=text], input[type=number], .form-grid select, .meta-row select, .cmp-bar select, #pf-select { padding: .5rem 1rem; border: 1px solid var(--gray); border-radius: 999px; font: 500 14px 'Manrope'; background: transparent; color: var(--desert); min-width: 0; }
+select option { background: var(--navy-2); }
+input[type=text]:focus, select:focus { outline: none; border-color: var(--megaman); }
+.logo-edit { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.logo-edit img { max-height: 56px; max-width: 220px; background: rgba(255,255,255,.06); border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; }
+.logo-edit .btn { margin-right: .4rem; }
+.meta-row { display: grid; grid-template-columns: 1.6fr 1.2fr 1fr .8fr auto; gap: .6rem; align-items: center; margin-bottom: .6rem; }
+.meta-hint { grid-column: 1 / -1; font-size: 12px; }
+@media (max-width: 768px) { .meta-row { grid-template-columns: 1fr 1fr; } }
 </style>
 </head>
 <body>
@@ -214,6 +227,7 @@ tbody tr:hover { background: rgba(69,189,254,.08); }
         <button class="nav-tab" data-tab="overview" disabled>📊 Visão Geral</button>
         <button class="nav-tab" data-tab="campaigns" disabled>📋 Campanhas <span id="campaign-count"></span></button>
         <button class="nav-tab" data-tab="analysis" disabled>📈 Análise</button>
+        <button class="nav-tab" data-tab="cliente">👤 Cliente</button>
     </nav>
 
     <!-- Upload -->
@@ -270,6 +284,9 @@ tbody tr:hover { background: rgba(69,189,254,.08); }
 
     <!-- Analysis -->
     <section id="analysis" class="tab-content"></section>
+
+    <!-- Perfil do Cliente -->
+    <section id="cliente" class="tab-content"></section>
 </main>
 
 <footer class="footer">© 2026 Grupo Galpão · Performance+ · Dados processados localmente no navegador</footer>
@@ -643,6 +660,7 @@ function setType(id, type) {
     c.type = type;
     c.typeManual = type !== c.autoType;
     saveOverride(c.name, c.typeManual ? type : null);
+    registrarAjuste(c.name, c.typeManual ? type : null);
     withDerived(c);
     renderAll();
     toast(`Objetivo de “${c.name}” alterado para ${TYPES[type].label}.`);
@@ -1096,6 +1114,78 @@ function gerarManchetes(comp, { evo = null, metas = [], funis = null } = {}) {
 }
 // #testavel:fim
 
+// ---------- Perfil do Cliente e Metas (módulo puro) ----------
+// #testavel:inicio
+// Métricas que aceitam Meta. objetivo: 'total' só vale onde a métrica existe no total.
+const METRICAS_META = {
+    costPerResult: { label: 'Custo por Resultado', comparador: '<=', fmt: 'brl', porObjetivo: true, noTotal: false },
+    roas: { label: 'ROAS (retorno sobre o investido)', comparador: '>=', fmt: 'x', porObjetivo: true, noTotal: true },
+    mainResult: { label: 'Resultado (quantidade)', comparador: '>=', fmt: 'int', porObjetivo: true, noTotal: false },
+    spend: { label: 'Investimento', comparador: '<=', fmt: 'brl', porObjetivo: true, noTotal: true },
+    ctr: { label: 'CTR', comparador: '>=', fmt: 'pct', porObjetivo: true, noTotal: true },
+    cpm: { label: 'CPM', comparador: '<=', fmt: 'brl', porObjetivo: true, noTotal: true }
+};
+const PERFIL_KEY = 'gg-analytics-perfis';
+const novoId = () => 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+// Aceita qualquer coisa vinda do localStorage e devolve um Perfil válido (descarta o que estiver estragado)
+function normalizarPerfil(p) {
+    p = p && typeof p === 'object' ? p : {};
+    const metas = (Array.isArray(p.metas) ? p.metas : []).filter(m => m && METRICAS_META[m.metrica]
+        && (m.objetivo === 'total' || TYPES[m.objetivo]) && (m.comparador === '<=' || m.comparador === '>=')
+        && typeof m.valor === 'number' && isFinite(m.valor))
+        .map(m => ({ id: String(m.id || novoId()), metrica: m.metrica, objetivo: m.objetivo, comparador: m.comparador, valor: m.valor }));
+    const ajustes = {}, faturamento = {};
+    for (const [n, t] of Object.entries(p.ajustes && typeof p.ajustes === 'object' ? p.ajustes : {})) if (TYPES[t]) ajustes[n] = t;
+    for (const [k, v] of Object.entries(p.faturamento && typeof p.faturamento === 'object' ? p.faturamento : {})) if (typeof v === 'number' && isFinite(v) && v >= 0) faturamento[k] = v;
+    return {
+        id: String(p.id || novoId()), nome: String(p.nome || 'Cliente').slice(0, 80),
+        logo: typeof p.logo === 'string' && /^data:image\//.test(p.logo) ? p.logo : null, metas, ajustes, faturamento
+    };
+}
+function normalizarPerfis(raw) {
+    const lista = (raw && Array.isArray(raw.lista) ? raw.lista : []).map(normalizarPerfil);
+    const unicos = lista.filter((p, i) => lista.findIndex(q => q.id === p.id) === i);
+    return { atual: unicos.some(p => p.id === (raw && raw.atual)) ? raw.atual : (unicos[0] ? unicos[0].id : null), lista: unicos };
+}
+
+const fmtMeta = (v, tipo) => tipo === 'brl' ? brl(v) : tipo === 'x' ? fmtNum(v, 2) + '×' : tipo === 'pct' ? fmtNum(v, 2) + '%' : int(v);
+function nomeDaMeta(m) {
+    if (m.metrica === 'costPerResult') return m.objetivo === 'total' ? 'Custo por Resultado' : cap(RESULTADO_TXT[m.objetivo].custo);
+    if (m.metrica === 'mainResult') return m.objetivo === 'total' ? 'Resultado' : cap(RESULTADO_TXT[m.objetivo].plur);
+    if (m.metrica === 'roas') return 'Retorno sobre o investido';
+    return METRICAS_META[m.metrica].label;
+}
+// Escala do medidor semicircular: 1,5× o maior entre valor e Meta, arredondada para cima em meio degrau decimal
+function escalaMedidor(valor, meta) {
+    const m = Math.max(valor, meta) * 1.5;
+    if (!(m > 0)) return 1;
+    const mag = Math.pow(10, Math.floor(Math.log10(m)));
+    return Math.ceil((m / mag) * 2) / 2 * mag;
+}
+
+// Avalia uma Meta contra o Período analisado. Devolve null quando a métrica não existe para aquele escopo.
+function avaliarMeta(meta, comp) {
+    const a = comp.analisado;
+    const agg = meta.objetivo === 'total' ? a.total : a.porObjetivo[meta.objetivo];
+    const valor = agg ? agg[meta.metrica] : null;
+    if (valor == null || !isFinite(valor)) return null;
+    const def = METRICAS_META[meta.metrica];
+    const atingida = meta.comparador === '<=' ? valor <= meta.valor : valor >= meta.valor;
+    const folga = meta.valor > 0 ? Math.abs(valor - meta.valor) / meta.valor * 100 : 0;
+    const menor = meta.comparador === '<=';
+    const leitura = `${pctCurto(folga)}% ${valor <= meta.valor ? (menor ? 'abaixo do limite' : 'abaixo do mínimo') : (menor ? 'acima do limite' : 'acima do mínimo')}`;
+    const nome = nomeDaMeta(meta);
+    return {
+        meta, nome, valor, atingida, folga, leitura, fmt: def.fmt, max: escalaMedidor(valor, meta.valor),
+        valorTxt: fmtMeta(valor, def.fmt), metaTxt: (menor ? 'até ' : 'ao menos ') + fmtMeta(meta.valor, def.fmt),
+        resumo: atingida ? `Meta atingida: ${nome.toLowerCase()} de ${fmtMeta(valor, def.fmt)} (${menor ? 'até ' : 'ao menos '}${fmtMeta(meta.valor, def.fmt)}).`
+            : `Meta não atingida: ${nome.toLowerCase()} de ${fmtMeta(valor, def.fmt)} (${menor ? 'até ' : 'ao menos '}${fmtMeta(meta.valor, def.fmt)}).`
+    };
+}
+const avaliarMetas = (metas, comp) => (metas || []).map(m => avaliarMeta(m, comp)).filter(Boolean);
+// #testavel:fim
+
 // ---------- Análise ----------
 function status(value, bm) {
     if (value == null || !bm) return 'none';
@@ -1299,7 +1389,7 @@ function showPeriod(i, announce = false) {
     const lote = state.lote, p = lote.periods[i];
     state.periodIndex = i;
     decimalComma = p.decimalComma;
-    const overrides = loadOverrides();
+    const overrides = ajustesAtuais();
     state.allRows = p.dataRows.map((r, n) => buildCampaign(r, p.idx, n, overrides));
     state.fileName = p.fileName;
     state.selectedId = null;
@@ -1319,6 +1409,7 @@ function showPeriod(i, announce = false) {
     document.getElementById('upload-msg').innerHTML = msg;
     document.getElementById('lote-restore').innerHTML = '';
     document.querySelectorAll('#lote-periods input').forEach(r => r.addEventListener('change', () => showPeriod(+r.value)));
+    renderCliente();
     if (announce) {
         toast(lote.periods.length > 1 ? `Lote carregado: ${lote.periods.length} Períodos` : 'CSV carregado!');
         switchTab(state.campaigns.length ? 'overview' : 'upload');
@@ -1622,6 +1713,157 @@ table.addEventListener('click', e => {
     const tr = e.target.closest('tr[data-id]');
     if (tr) openAnalysis(tr.dataset.id);
 });
+// ---------- Perfil do Cliente (guardado neste navegador) ----------
+function carregarPerfis() {
+    try { return normalizarPerfis(JSON.parse(localStorage.getItem(PERFIL_KEY))); } catch { return normalizarPerfis(null); }
+}
+function salvarPerfis() {
+    try { localStorage.setItem(PERFIL_KEY, JSON.stringify(state.perfis)); }
+    catch { toast('Não foi possível guardar o Perfil neste navegador (armazenamento cheio ou bloqueado).', true); }
+}
+state.perfis = carregarPerfis();
+if (!state.perfis.lista.length) { const p = normalizarPerfil({ nome: 'Cliente' }); state.perfis = { atual: p.id, lista: [p] }; }
+const perfilAtual = () => state.perfis.lista.find(p => p.id === state.perfis.atual) || state.perfis.lista[0];
+// Ajustes de Objetivo: os do Perfil valem por cima dos antigos da V2 (que continuam existindo para um CSV só)
+const ajustesAtuais = () => ({ ...loadOverrides(), ...perfilAtual().ajustes });
+function registrarAjuste(nome, tipo) {
+    const p = perfilAtual();
+    if (tipo) p.ajustes[nome] = tipo; else delete p.ajustes[nome];
+    salvarPerfis();
+    if (document.getElementById('cliente')) renderCliente();
+}
+// "1.234,56", "R$ 1234,5", "1234.56" -> número; vazio ou inválido -> null
+function lerValorBR(s) {
+    s = String(s ?? '').replace(/[R$\s]/g, '');
+    if (!s) return null;
+    if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+    const n = parseFloat(s);
+    return isFinite(n) && n >= 0 ? n : null;
+}
+// Reduz o logo para caber no localStorage; se algo falhar, usa o arquivo como veio
+function logoParaDataUrl(file) {
+    return new Promise(resolve => {
+        const r = new FileReader();
+        r.onerror = () => resolve(null);
+        r.onload = () => {
+            const bruto = String(r.result);
+            const img = new Image();
+            img.onerror = () => resolve(/^data:image\//.test(bruto) && bruto.length < 400000 ? bruto : null);
+            img.onload = () => {
+                try {
+                    const k = Math.min(1, 480 / img.width, 160 / img.height);
+                    const c = document.createElement('canvas');
+                    c.width = Math.max(1, Math.round(img.width * k)); c.height = Math.max(1, Math.round(img.height * k));
+                    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+                    resolve(c.toDataURL('image/png'));
+                } catch { resolve(/^data:image\//.test(bruto) && bruto.length < 400000 ? bruto : null); }
+            };
+            img.src = bruto;
+        };
+        r.readAsDataURL(file);
+    });
+}
+
+function renderCliente() {
+    const el = document.getElementById('cliente');
+    const p = perfilAtual();
+    const periods = state.lote ? state.lote.periods : [];
+    const opt = (v, label, sel) => `<option value="${esc(v)}"${sel ? ' selected' : ''}>${esc(label)}</option>`;
+    const ajustes = Object.entries(p.ajustes);
+    el.innerHTML = `
+    <div class="grid-2 mb-4">
+        <div class="card"><div class="card-header row"><div class="card-title">Perfil do Cliente</div>
+            <div class="filters"><select id="pf-select">${state.perfis.lista.map(x => opt(x.id, x.nome, x.id === p.id)).join('')}</select>
+            <button class="btn btn-sm" id="pf-novo">＋ Novo Cliente</button></div></div>
+            <div class="card-content form-grid">
+                <label>Nome do Cliente<input type="text" id="pf-nome" value="${esc(p.nome)}" maxlength="80"></label>
+                <div class="logo-edit">
+                    ${p.logo ? `<img src="${p.logo}" alt="Logo de ${esc(p.nome)}">` : '<span class="muted">Sem logo: o Relatório usa o nome.</span>'}
+                    <div><label class="btn btn-sm btn-outline" for="pf-logo">${p.logo ? 'Trocar logo' : 'Enviar logo'}</label><input type="file" id="pf-logo" accept="image/*" hidden>
+                    ${p.logo ? '<button class="btn btn-sm btn-outline" id="pf-logo-x">Remover</button>' : ''}</div>
+                </div>
+                <p class="muted" style="font-size:12px">O Perfil fica só neste navegador. Para usar em outro computador, crie de novo.</p>
+                ${state.perfis.lista.length > 1 ? '<button class="btn btn-sm btn-outline" id="pf-excluir">Excluir este Cliente</button>' : ''}
+            </div></div>
+        <div class="card"><div class="card-header"><div class="card-title">Faturamento por Período <span class="muted" style="font-size:12px;font-weight:400">(opcional · habilita o ROAS do total)</span></div></div>
+            <div class="card-content form-grid">
+                ${periods.length ? periods.map(q => `<label>${esc(rotuloPeriodo(q))} <span class="muted">(${fmtDate(q.start)} a ${fmtDate(q.end)})</span>
+                    <input type="text" inputmode="decimal" data-fat="${periodoKey(q)}" placeholder="R$ 0,00" value="${p.faturamento[periodoKey(q)] != null ? esc(fmtNum(p.faturamento[periodoKey(q)], 2)) : ''}"></label>`).join('')
+                : '<p class="muted">Suba os CSVs na aba Upload para informar o Faturamento de cada Período.</p>'}
+            </div></div>
+    </div>
+    <div class="card mb-4"><div class="card-header row"><div class="card-title">Metas</div><button class="btn btn-sm" id="pf-meta-add">＋ Adicionar Meta</button></div>
+        <div class="card-content">
+            ${p.metas.length ? p.metas.map(m => {
+                const def = METRICAS_META[m.metrica];
+                return `<div class="meta-row" data-meta="${esc(m.id)}">
+                    <select data-f="metrica">${Object.entries(METRICAS_META).map(([k, d]) => opt(k, d.label, k === m.metrica)).join('')}</select>
+                    <select data-f="objetivo">${opt('total', 'Total da conta', m.objetivo === 'total')}${TYPE_KEYS.map(k => opt(k, TYPES[k].label, k === m.objetivo)).join('')}</select>
+                    <select data-f="comparador">${opt('<=', 'até (≤)', m.comparador === '<=')}${opt('>=', 'ao menos (≥)', m.comparador === '>=')}</select>
+                    <input type="text" inputmode="decimal" data-f="valor" value="${esc(fmtNum(m.valor, 2))}" aria-label="Valor da Meta">
+                    <button class="btn btn-sm btn-outline" data-meta-x="${esc(m.id)}" title="Remover">✕</button>
+                    ${m.objetivo === 'total' && def.noTotal === false ? '<span class="muted meta-hint">Resultado só existe dentro de um Objetivo: escolha um.</span>' : ''}
+                </div>`;
+            }).join('') : '<p class="muted">Nenhuma Meta. Exemplo: Custo por Resultado de Vendas até R$ 40, ou ROAS ao menos 8×. As Metas atingidas aparecem no Relatório.</p>'}
+        </div></div>
+    <div class="card"><div class="card-header"><div class="card-title">Ajustes de Objetivo</div></div>
+        <div class="card-content">
+            ${ajustes.length ? ajustes.map(([n, t]) => `<div class="row" style="padding:.3rem 0"><span>${esc(n)} <span class="badge b-${t}">${TYPES[t].label}</span></span><button class="btn btn-sm btn-outline" data-ajuste-x="${esc(n)}">Remover</button></div>`).join('')
+                : '<p class="muted">Nenhum ajuste. Ao mudar o Objetivo de uma Campanha na aba Campanhas, o ajuste fica guardado aqui e vale para todos os Períodos.</p>'}
+        </div></div>`;
+}
+
+const clienteEl = document.getElementById('cliente');
+clienteEl.addEventListener('change', async e => {
+    const p = perfilAtual(), t = e.target;
+    if (t.id === 'pf-select') { state.perfis.atual = t.value; salvarPerfis(); renderCliente(); renderComparativo(); return; }
+    if (t.id === 'pf-nome') { p.nome = t.value.trim() || 'Cliente'; salvarPerfis(); renderCliente(); renderComparativo(); return; }
+    if (t.id === 'pf-logo' && t.files[0]) {
+        const url = await logoParaDataUrl(t.files[0]);
+        if (!url) return toast('Não foi possível ler essa imagem.', true);
+        p.logo = url; salvarPerfis(); renderCliente(); return;
+    }
+    if (t.dataset.fat) {
+        const v = lerValorBR(t.value);
+        if (v == null) delete p.faturamento[t.dataset.fat]; else p.faturamento[t.dataset.fat] = v;
+        salvarPerfis(); renderCliente(); renderComparativo(); return;
+    }
+    const row = t.closest('[data-meta]');
+    if (row && t.dataset.f) {
+        const m = p.metas.find(x => x.id === row.dataset.meta);
+        if (!m) return;
+        if (t.dataset.f === 'valor') { const v = lerValorBR(t.value); if (v != null) m.valor = v; }
+        else {
+            m[t.dataset.f] = t.value;
+            if (t.dataset.f === 'metrica') m.comparador = METRICAS_META[m.metrica].comparador;
+        }
+        salvarPerfis(); renderCliente(); renderComparativo();
+    }
+});
+clienteEl.addEventListener('click', e => {
+    const p = perfilAtual(), b = e.target.closest('button');
+    if (!b) return;
+    if (b.id === 'pf-novo') {
+        const novo = normalizarPerfil({ nome: 'Novo Cliente' });
+        state.perfis.lista.push(novo); state.perfis.atual = novo.id; salvarPerfis(); renderCliente(); renderComparativo();
+    } else if (b.id === 'pf-excluir') {
+        if (!confirm(`Excluir o Perfil “${p.nome}”, com Metas e Faturamento?`)) return;
+        state.perfis.lista = state.perfis.lista.filter(x => x.id !== p.id); state.perfis.atual = state.perfis.lista[0].id; salvarPerfis(); renderCliente(); renderComparativo();
+    } else if (b.id === 'pf-logo-x') { p.logo = null; salvarPerfis(); renderCliente(); }
+    else if (b.id === 'pf-meta-add') {
+        p.metas.push({ id: novoId(), metrica: 'costPerResult', objetivo: 'ecommerce', comparador: '<=', valor: 40 }); salvarPerfis(); renderCliente();
+    } else if (b.dataset.metaX) { p.metas = p.metas.filter(m => m.id !== b.dataset.metaX); salvarPerfis(); renderCliente(); renderComparativo(); }
+    else if (b.dataset.ajusteX) {
+        delete p.ajustes[b.dataset.ajusteX]; salvarPerfis();
+        try { const o = loadOverrides(); delete o[b.dataset.ajusteX]; localStorage.setItem(OVERRIDE_KEY, JSON.stringify(o)); } catch { /* sem armazenamento */ }
+        if (state.lote) showPeriod(state.periodIndex); else renderCliente();
+        renderComparativo();
+    }
+});
+
+
+function renderComparativo() { /* aba Comparativo: ticket #6 */ }
+renderCliente();
 renderRestore();
 </script>
 </body>
