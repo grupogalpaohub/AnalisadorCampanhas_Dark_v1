@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Relatório OffRio · Protótipo</title>
+<!-- Protótipo descartável (issue #1). Números reais da OffRio, set/2026. Comparações com agosto são ILUSTRATIVAS. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#00131D; --navy-2:#001A29; --aqua:#003F61; --aqua-light:#0D6DA0;
+  --blue:#45BDFE; --blue-light:#89D5FE;
+  --gold:#E6C364; --gold-ink:#8A6A12;
+  --desert:#FFFAF3; --sand:#F4EBDD; --sand-line:#E7DCCB;
+  --ink:#00131D; --ink-2:#3C5466; --ink-3:#6B8090;
+  --success:#2E9E33; --success-bright:#5CE560; --danger:#D64545;
+  --r-lg:22px; --r-md:14px; --r-sm:8px;
+  --page-pad:16mm;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:#5b6872}
+body{background:#5b6872;font-family:Manrope,sans-serif;color:var(--ink);-webkit-print-color-adjust:exact;print-color-adjust:exact;font-variant-numeric:tabular-nums}
+::selection{background:var(--gold);color:var(--navy)}
+h1,h2,h3,.num{font-family:Ubuntu,sans-serif}
+@page{size:A4;margin:0}
+
+.page{width:210mm;height:297mm;margin:10mm auto;position:relative;overflow:hidden;background:var(--desert);padding:var(--page-pad);display:flex;flex-direction:column;box-shadow:0 18px 40px -18px rgba(0,0,0,.55)}
+.page.dark{background:radial-gradient(120% 80% at 85% 0%,#0B3A57 0%,var(--navy-2) 45%,var(--navy) 100%);color:var(--desert)}
+
+/* cabeçalho/rodapé das páginas de dados */
+.run{display:flex;justify-content:space-between;align-items:center;font-size:8.5pt;color:var(--ink-3);font-weight:600;letter-spacing:.02em}
+.run .brand{display:flex;align-items:center;gap:6px;color:var(--aqua);font-family:Ubuntu;font-weight:700}
+.foot{margin-top:auto;display:flex;justify-content:space-between;font-size:8pt;color:var(--ink-3);border-top:1px solid var(--sand-line);padding-top:4mm}
+.dark .foot{border-color:rgba(137,213,254,.18);color:#9DB4C4}
+
+.headline{font-size:25pt;line-height:1.08;font-weight:700;letter-spacing:-.02em;margin:9mm 0 3mm;max-width:150mm;text-wrap:balance}
+.headline em{font-style:normal;color:var(--aqua-light)}
+.dark .headline em{color:var(--gold)}
+.lede{font-size:10.5pt;line-height:1.5;color:var(--ink-2);max-width:140mm}
+
+.badge{display:inline-flex;align-items:center;gap:3px;font:700 8.5pt Manrope;padding:3px 8px;border-radius:99px}
+.badge.up{background:#DDF3DE;color:#1F7A24}
+.badge.down{background:#FBE1E1;color:#A83232}
+.badge svg{width:9px;height:9px}
+
+/* ===== CAPA ===== */
+.cover-top{display:flex;justify-content:space-between;align-items:center}
+.gg{display:flex;align-items:center;gap:10px}
+.gg-logo{height:15mm;width:13mm;display:block}
+.gg-name{font:700 11pt Ubuntu;letter-spacing:.06em;text-transform:uppercase;line-height:1.1}
+.gg-name small{display:block;font:600 7.5pt Manrope;color:var(--blue);letter-spacing:.12em}
+.client-logo{height:13mm;padding:0 6mm;border-radius:10px;background:rgba(255,250,243,.06);border:1px solid rgba(255,250,243,.14);display:flex;align-items:center;font:700 15pt Ubuntu;letter-spacing:.04em}
+.client-logo b{color:var(--blue)}
+.cover-art{position:absolute;right:-30mm;top:58mm;width:190mm;opacity:.95}
+.cover-body{margin-top:auto;position:relative}
+.seal{display:inline-flex;align-items:center;gap:8px;border:1.5px solid var(--gold);color:var(--gold);border-radius:99px;padding:6px 14px 6px 8px;font:700 9pt Ubuntu;letter-spacing:.14em;text-transform:uppercase}
+.seal i{width:20px;height:20px;border-radius:50%;background:var(--gold);color:var(--navy);display:grid;place-items:center;font:700 11pt Ubuntu;font-style:normal}
+.cover-title{font-size:46pt;line-height:.98;letter-spacing:-.035em;font-weight:700;margin:8mm 0 6mm}
+.cover-title span{color:var(--blue)}
+.cover-meta{display:flex;gap:12mm;padding-top:6mm;border-top:1px solid rgba(137,213,254,.2);font-size:9pt;color:#9DB4C4}
+.cover-meta b{display:block;color:var(--desert);font:500 12pt Ubuntu;margin-top:2px}
+
+/* ===== RESUMO ===== */
+.hero-row{display:grid;grid-template-columns:1.25fr 1fr;gap:5mm;margin-top:8mm}
+.hero{background:var(--navy);color:var(--desert);border-radius:var(--r-lg);padding:8mm;position:relative;overflow:hidden}
+.hero .lbl{font-size:9pt;color:var(--blue-light);font-weight:600}
+.hero .num{font-size:50pt;font-weight:700;letter-spacing:-.03em;line-height:1;margin:4mm 0 3mm}
+.hero .num small{font-size:20pt;color:var(--gold);margin-left:2px}
+.hero p{font-size:9.5pt;color:#B9CCD9;line-height:1.45;max-width:70mm}
+.hero svg{position:absolute;right:-6mm;bottom:-6mm;opacity:.9}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:5mm;margin-top:5mm}
+.card{background:#fff;border:1px solid var(--sand-line);border-radius:var(--r-md);padding:5.5mm;display:grid;grid-template-columns:1fr auto;gap:2mm 4mm;align-items:end}
+.card .lbl{grid-column:1/-1;font-size:8.5pt;font-weight:700;color:var(--ink-2)}
+.card .num{font-size:22pt;font-weight:700;letter-spacing:-.02em;line-height:1}
+.card .num small{font-size:11pt;color:var(--ink-3);font-weight:500}
+.card .sub{grid-column:1/-1;font-size:8pt;color:var(--ink-3);display:flex;gap:6px;align-items:center}
+.stack{display:grid;gap:5mm}
+.note{margin-top:6mm;background:var(--sand);border-radius:var(--r-md);padding:5mm 6mm;font-size:9.5pt;line-height:1.5;color:var(--ink-2);display:flex;gap:4mm}
+.note b{color:var(--ink)}
+.note svg{flex:none;margin-top:1px}
+
+/* ===== FUNIL ===== */
+.funnel-wrap{margin-top:7mm;display:grid;grid-template-columns:1fr 46mm;gap:6mm;flex:1}
+.funnel-side{display:flex;flex-direction:column;gap:4mm;padding-top:2mm}
+.kpi-mini{border-top:1px solid var(--sand-line);padding-top:3mm}
+.kpi-mini .lbl{font-size:8pt;color:var(--ink-3);font-weight:700}
+.kpi-mini .num{font-size:17pt;font-weight:700;margin-top:1mm}
+.leak{background:var(--navy);color:var(--desert);border-radius:var(--r-md);padding:5mm}
+.leak .lbl{font-size:8pt;color:var(--gold);font-weight:700}
+.leak p{font-size:9pt;line-height:1.45;margin-top:2mm;color:#C9D8E2}
+.leak .num{font-size:22pt;color:var(--desert);margin-top:2mm}
+
+/* ===== EVOLUÇÃO / TOP ===== */
+.panel{background:#fff;border:1px solid var(--sand-line);border-radius:var(--r-lg);padding:6mm;margin-top:6mm}
+.panel h3{font-size:11pt;font-weight:700;display:flex;justify-content:space-between;align-items:baseline}
+.panel h3 small{font:600 8pt Manrope;color:var(--ink-3)}
+.legend{display:flex;gap:5mm;font-size:8pt;color:var(--ink-2);margin-top:2mm}
+.legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px;vertical-align:middle}
+table{width:100%;border-collapse:collapse;margin-top:3mm;font-size:9pt}
+th{text-align:right;font-size:7.5pt;color:var(--ink-3);font-weight:700;padding:2mm 0;border-bottom:1px solid var(--sand-line)}
+th:first-child,td:first-child{text-align:left}
+td{padding:3mm 0;border-bottom:1px solid #F1E8DA;text-align:right;font-weight:600}
+td:first-child{font-weight:700;color:var(--ink)}
+td .tag{display:block;font:600 7.5pt Manrope;color:var(--ink-3);margin-top:1px}
+.bar{height:5px;border-radius:3px;background:var(--sand);margin-top:4px;overflow:hidden;width:40mm}
+.bar span{display:block;height:100%;background:linear-gradient(90deg,var(--blue),var(--aqua))}
+.rank{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--navy);color:var(--gold);font:700 8pt Ubuntu;margin-right:6px;vertical-align:top}
+
+/* ===== METAS ===== */
+.goals{display:grid;grid-template-columns:1fr 1fr;gap:5mm;margin-top:8mm}
+.goal{background:#fff;border:1px solid var(--sand-line);border-radius:var(--r-lg);padding:6mm;text-align:center}
+.goal h3{font-size:10.5pt}
+.goal .read{font-size:9pt;color:var(--ink-2);line-height:1.45;margin-top:3mm}
+.goal .status{display:inline-flex;gap:5px;align-items:center;margin-top:4mm;font:700 8.5pt Manrope;color:#1F7A24;background:#DDF3DE;border-radius:99px;padding:4px 10px}
+
+/* ===== ENCERRAMENTO ===== */
+.comment{margin-top:8mm;font-size:12.5pt;line-height:1.6;color:#DCE7EE;max-width:160mm}
+.comment::first-line{color:var(--desert)}
+.sign{margin-top:4mm;font-size:9pt;color:var(--blue-light);font-weight:600}
+.steps{margin-top:9mm;display:grid;gap:3.5mm}
+.step{display:grid;grid-template-columns:36mm 1fr;gap:5mm;align-items:start;padding:4.5mm 5mm;border-radius:var(--r-md);background:rgba(255,250,243,.045);border:1px solid rgba(137,213,254,.14)}
+.pilar{display:inline-flex;align-items:center;gap:6px;font:700 8pt Ubuntu;letter-spacing:.08em;text-transform:uppercase;color:var(--gold)}
+.pilar i{width:7px;height:7px;border-radius:50%;background:var(--gold)}
+.step p{font-size:10pt;line-height:1.45;color:#DCE7EE}
+.step p b{color:var(--desert)}
+.closing{margin-top:auto;display:flex;justify-content:space-between;align-items:end;padding-top:8mm}
+.closing .big{font:700 22pt Ubuntu;letter-spacing:-.02em;line-height:1.1}
+.closing .big span{color:var(--gold)}
+
+.proto-note{width:210mm;margin:0 auto 10mm;color:#E8EEF2;font-size:9pt;line-height:1.4}
+@media print{
+  html,body{background:none}
+  .page{margin:0;box-shadow:none;break-after:page}
+  .proto-note{display:none}
+}
+</style>
+</head>
+<body>
+
+<p class="proto-note" style="padding-top:8mm">Protótipo descartável · issue #1. Números de setembro/2026 vêm do CSV real da OffRio. Variações ↑↓ contra agosto e a evolução semanal são <b>ilustrativas</b> (o CSV tem um Período só). Imprima com Ctrl+P, A4, sem margens.</p>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="gglogo" viewBox="0 0 469 542">
+    <g transform="matrix(1,0,0,1,-2598.381261,-381.24592)">
+        <g transform="matrix(0.38345,0,0,0.38345,2161.898092,113.333253)">
+            <path d="M1147.897,1367.452L1540.447,729.963C1546.049,722.541 1552.937,716.144 1560.778,711.105C1573.002,703.248 1587.542,698.689 1603.14,698.689C1618.792,698.689 1633.381,703.28 1645.632,711.188C1653.945,716.554 1661.181,723.448 1666.942,731.47L1785.607,924.178L1905.2,729.963C1910.802,722.541 1917.689,716.144 1925.531,711.105C1937.754,703.248 1952.295,698.689 1967.893,698.689C1983.545,698.689 1998.134,703.28 2010.385,711.188C2018.698,716.554 2025.934,723.448 2031.695,731.47L2301.697,1169.944C2301.697,1169.944 2303.181,1172.478 2304.083,1173.819L2306.135,1177.152C2310.074,1184.166 2312.321,1192.256 2312.321,1200.867C2312.321,1227.659 2290.569,1249.41 2263.777,1249.41C2261.37,1249.41 2257.092,1249.548 2257.092,1249.548L1933.627,1248.702C1907.951,1248.105 1885.308,1235.154 1871.414,1215.568L1785.607,1076.22L1583.799,1403.949L1633.345,1484.41L2325.511,1485.511C2345.83,1491.31 2360.724,1510.029 2360.724,1532.199C2360.724,1540.706 2358.531,1548.705 2354.68,1555.661L2352.324,1559.487C2350.931,1561.531 2348.763,1565.27 2348.763,1565.27L2035.961,2073.25C2035.67,2073.728 2035.377,2074.204 2035.081,2074.679C2029.049,2084.245 2021.009,2092.42 2011.555,2098.61C1999.216,2106.69 1984.468,2111.39 1968.632,2111.39C1953.104,2111.39 1938.622,2106.871 1926.432,2099.079C1916.861,2092.96 1908.701,2084.822 1902.557,2075.268L1785.762,1885.597L1667.732,2077.274C1661.808,2085.772 1654.247,2093.046 1645.507,2098.637C1633.314,2106.437 1618.826,2110.96 1603.29,2110.96C1587.718,2110.96 1573.199,2106.416 1560.987,2098.582C1551.601,2092.562 1543.578,2084.598 1537.489,2075.26L1147.468,1441.88C1141.62,1430.897 1138.304,1418.364 1138.304,1405.062C1138.304,1391.44 1141.782,1378.623 1147.897,1367.452ZM1832.419,1000.199L1936.355,1168.988L2207.922,1169.698L1967.984,780.047L1832.419,1000.199ZM1603.231,2029.981L1738.951,1809.576L1587.768,1564.06L1458.636,1563.854C1437.106,1563.079 1419.132,1548.255 1413.614,1528.282C1412.476,1524.162 1411.867,1519.823 1411.867,1515.343C1411.867,1503.436 1416.163,1492.525 1423.288,1484.076L1538.629,1484.26L1510.419,1438.448C1505.693,1428.356 1503.051,1417.096 1503.051,1405.224C1503.051,1390.846 1506.925,1377.366 1513.684,1365.772L1738.795,1000.199L1603.231,780.047L1218.391,1405.014L1603.231,2029.981ZM1969.138,2029.727L2255.231,1565.121L1983.37,1564.689L1833.074,1808.764L1969.138,2029.727ZM1682.484,1564.21L1786.262,1732.743L1889.838,1564.54L1682.484,1564.21Z" style="fill:white;"/>
+        </g>
+    </g>
+</symbol><defs>
+    <linearGradient id="gFunnel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#45BDFE"/><stop offset="1" stop-color="#003F61"/>
+    </linearGradient>
+    <linearGradient id="gCover" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#45BDFE" stop-opacity=".9"/><stop offset="1" stop-color="#003F61" stop-opacity=".2"/>
+    </linearGradient>
+    <symbol id="up" viewBox="0 0 10 10"><path d="M5 1.5 9 7H1z" fill="currentColor"/></symbol>
+    <symbol id="down" viewBox="0 0 10 10"><path d="M5 8.5 1 3h8z" fill="currentColor"/></symbol>
+  </defs>
+</svg>
+
+<!-- ============ 1 · CAPA ============ -->
+<section class="page dark">
+  <div class="cover-top">
+    <div class="gg"><svg class="gg-logo" viewBox="0 0 469 542" role="img" aria-label="Grupo Galpão"><use href="#gglogo"/></svg><div class="gg-name">Grupo Galpão<small>Performance Marketing</small></div></div>
+    <div class="client-logo">OFF<b>RIO</b></div>
+  </div>
+
+  <!-- arte: o funil da capa, em camadas -->
+  <svg class="cover-art" viewBox="0 0 400 420" aria-hidden="true">
+    <g fill="none" stroke="#45BDFE" stroke-opacity=".18">
+      <circle cx="250" cy="170" r="160"/><circle cx="250" cy="170" r="120"/><circle cx="250" cy="170" r="80"/>
+    </g>
+    <path d="M60 40h340l-60 70H120z" fill="url(#gCover)"/>
+    <path d="M125 120h210l-40 62H165z" fill="#45BDFE" fill-opacity=".55"/>
+    <path d="M170 192h120l-26 54h-68z" fill="#0D6DA0" fill-opacity=".8"/>
+    <path d="M200 256h60l-14 44h-32z" fill="#003F61"/>
+    <circle cx="230" cy="335" r="16" fill="#E6C364"/>
+    <text x="230" y="340" text-anchor="middle" font-family="Ubuntu" font-weight="700" font-size="13" fill="#00131D">185</text>
+  </svg>
+
+  <div class="cover-body">
+    <div class="seal"><i>+</i>Performance+</div>
+    <h1 class="cover-title">Relatório<br>de <span>Setembro</span></h1>
+    <p class="lede" style="color:#B9CCD9">R$ 6.437 em anúncios de venda trouxeram R$ 65.609 em compras no site. Para cada real investido, voltaram dez.</p>
+    <div class="cover-meta">
+      <div>Período analisado<b>1 a 30 set 2026</b></div>
+      <div>Comparado com<b>1 a 31 ago 2026</b></div>
+      <div>Plataforma<b>Meta Ads</b></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 2 · RESUMO ============ -->
+<section class="page">
+  <div class="run"><span class="brand">GG · OffRio</span><span>Resumo do mês</span></div>
+  <h2 class="headline">Cada <em>R$ 1</em> investido em vendas voltou como <em>R$ 10,19</em>.</h2>
+  <p class="lede">O mês fechou com 185 compras no site e custo por compra abaixo da Meta. A coleção Set/Out foi a mais eficiente.</p>
+
+  <div class="hero-row">
+    <div class="hero">
+      <div class="lbl">Faturamento atribuído aos anúncios</div>
+      <div class="num">R$ 65,6<small>mil</small></div>
+      <p>Compras feitas no site depois de ver ou clicar num anúncio de venda.</p>
+      <span class="badge up" style="margin-top:4mm"><svg><use href="#up"/></svg>18% vs ago</span>
+      <svg width="150" height="90" viewBox="0 0 150 90" aria-hidden="true">
+        <g fill="#45BDFE">
+          <rect x="10" y="60" width="16" height="30" rx="3" fill-opacity=".25"/>
+          <rect x="34" y="48" width="16" height="42" rx="3" fill-opacity=".4"/>
+          <rect x="58" y="52" width="16" height="38" rx="3" fill-opacity=".55"/>
+          <rect x="82" y="30" width="16" height="60" rx="3" fill-opacity=".75"/>
+          <rect x="106" y="12" width="16" height="78" rx="3" fill="#E6C364"/>
+        </g>
+      </svg>
+    </div>
+    <div class="stack">
+      <div class="card">
+        <div class="lbl">Investimento total</div>
+        <div class="num">R$ 7.186</div>
+        <svg width="70" height="26" viewBox="0 0 70 26" aria-hidden="true"><polyline points="2,18 18,15 34,17 50,9 68,6" fill="none" stroke="#45BDFE" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="68" cy="6" r="3" fill="#003F61"/></svg>
+        <div class="sub"><span class="badge up"><svg><use href="#up"/></svg>9%</span>R$ 6.438 vendas · R$ 748 perfil</div>
+      </div>
+      <div class="card">
+        <div class="lbl">Retorno (ROAS)</div>
+        <div class="num">10,19<small>×</small></div>
+        <svg width="70" height="26" viewBox="0 0 70 26" aria-hidden="true"><polyline points="2,20 18,19 34,14 50,12 68,5" fill="none" stroke="#45BDFE" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="68" cy="5" r="3" fill="#003F61"/></svg>
+        <div class="sub"><span class="badge up"><svg><use href="#up"/></svg>8%</span>Meta: ao menos 8×</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <div class="lbl">Compras no site</div>
+      <div class="num">185</div>
+      <svg width="70" height="26" viewBox="0 0 70 26" aria-hidden="true"><g fill="#45BDFE"><rect x="2" y="14" width="10" height="12" rx="2" fill-opacity=".35"/><rect x="16" y="10" width="10" height="16" rx="2" fill-opacity=".5"/><rect x="30" y="12" width="10" height="14" rx="2" fill-opacity=".65"/><rect x="44" y="6" width="10" height="20" rx="2" fill-opacity=".8"/><rect x="58" y="2" width="10" height="24" rx="2" fill="#003F61"/></g></svg>
+      <div class="sub"><span class="badge up"><svg><use href="#up"/></svg>14%</span>ticket médio R$ 354,64</div>
+    </div>
+    <div class="card">
+      <div class="lbl">Custo por compra</div>
+      <div class="num">R$ 34,80</div>
+      <svg width="70" height="26" viewBox="0 0 70 26" aria-hidden="true"><polyline points="2,6 18,8 34,7 50,14 68,18" fill="none" stroke="#45BDFE" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="68" cy="18" r="3" fill="#003F61"/></svg>
+      <div class="sub"><span class="badge up"><svg><use href="#down"/></svg>4% mais barato</span>Meta: até R$ 40</div>
+    </div>
+    <div class="card">
+      <div class="lbl">Visitas ao perfil do Instagram</div>
+      <div class="num">3.297</div>
+      <svg width="70" height="26" viewBox="0 0 70 26" aria-hidden="true"><polyline points="2,12 18,10 34,14 50,16 68,17" fill="none" stroke="#45BDFE" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="68" cy="17" r="3" fill="#003F61"/></svg>
+      <div class="sub"><span class="badge down"><svg><use href="#down"/></svg>6%</span>R$ 0,23 por visita</div>
+    </div>
+    <div class="card">
+      <div class="lbl">Pessoas alcançadas</div>
+      <div class="num">114,8<small> mil</small></div>
+      <svg width="70" height="26" viewBox="0 0 70 26" aria-hidden="true"><polyline points="2,18 18,16 34,12 50,12 68,8" fill="none" stroke="#45BDFE" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="68" cy="8" r="3" fill="#003F61"/></svg>
+      <div class="sub"><span class="badge up"><svg><use href="#up"/></svg>11%</span>196 mil exibições</div>
+    </div>
+  </div>
+
+  <div class="note">
+    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="8" fill="#E6C364"/><path d="M9 5v5M9 12.6v.4" stroke="#00131D" stroke-width="2" stroke-linecap="round"/></svg>
+    <span><b>Destaque.</b> A campanha da coleção Set/Out vendeu com o menor custo do mês (R$ 25,64 por compra) e devolveu 14,6 vezes o investido.</span>
+  </div>
+
+  <div class="foot"><span>Relatório Performance+ · Setembro 2026</span><span>2</span></div>
+</section>
+
+<!-- ============ 3 · FUNIL ============ -->
+<section class="page">
+  <div class="run"><span class="brand">GG · OffRio</span><span>Funil de vendas</span></div>
+  <h2 class="headline">De <em>148 mil</em> exibições a <em>185</em> compras.</h2>
+  <p class="lede">O caminho de quem viu um anúncio de venda até finalizar a compra no site. Os selos dourados mostram quantos passaram de uma etapa para a próxima.</p>
+
+  <div class="funnel-wrap">
+    <svg viewBox="0 0 440 600" width="100%" aria-label="Funil: 148.170 exibições, 10.379 cliques, 2.018 carrinhos, 469 checkouts, 185 compras">
+      <defs>
+        <linearGradient id="s1" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#45BDFE"/><stop offset="1" stop-color="#2FA3E3"/></linearGradient>
+        <linearGradient id="s2" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#2FA3E3"/><stop offset="1" stop-color="#1987C2"/></linearGradient>
+        <linearGradient id="s3" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#1987C2"/><stop offset="1" stop-color="#0D6DA0"/></linearGradient>
+        <linearGradient id="s4" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#0D6DA0"/><stop offset="1" stop-color="#035680"/></linearGradient>
+        <linearGradient id="s5" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#035680"/><stop offset="1" stop-color="#003F61"/></linearGradient>
+        <filter id="sh" x="-20%" y="-20%" width="140%" height="160%"><feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#00131D" flood-opacity=".18"/></filter>
+      </defs>
+      <!-- larguras: 420, 330, 250, 180, 128 (escala log). altura 92, gap 26 -->
+      <g filter="url(#sh)">
+        <path d="M10 0H430L415 92H25Z" fill="url(#s1)" rx="10"/>
+        <path d="M55 118H385L370 210H70Z" fill="url(#s2)"/>
+        <path d="M95 236H345L330 328H110Z" fill="url(#s3)"/>
+        <path d="M130 354H310L296 446H144Z" fill="url(#s4)"/>
+        <path d="M156 472H284L272 564H168Z" fill="url(#s5)"/>
+      </g>
+      <g font-family="Ubuntu" fill="#FFFAF3" text-anchor="middle">
+        <text x="220" y="44" font-size="30" font-weight="700">148.170</text><text x="220" y="68" font-family="Manrope" font-size="12" font-weight="600" fill-opacity=".85">viram um anúncio</text>
+        <text x="220" y="162" font-size="28" font-weight="700">10.379</text><text x="220" y="186" font-family="Manrope" font-size="12" font-weight="600" fill-opacity=".85">clicaram para o site</text>
+        <text x="220" y="280" font-size="26" font-weight="700">2.018</text><text x="220" y="304" font-family="Manrope" font-size="12" font-weight="600" fill-opacity=".85">puseram no carrinho</text>
+        <text x="220" y="398" font-size="24" font-weight="700">469</text><text x="220" y="422" font-family="Manrope" font-size="11.5" font-weight="600" fill-opacity=".85">foram ao pagamento</text>
+        <text x="220" y="516" font-size="24" font-weight="700" fill="#E6C364">185</text><text x="220" y="540" font-family="Manrope" font-size="11.5" font-weight="600" fill-opacity=".9">compraram</text>
+      </g>
+      <!-- selos dourados entre etapas -->
+      <g font-family="Ubuntu" font-weight="700" font-size="13" text-anchor="middle" fill="#00131D">
+        <g transform="translate(400 105)"><rect x="-34" y="-13" width="68" height="26" rx="13" fill="#E6C364"/><text y="5">7,0%</text></g>
+        <g transform="translate(360 223)"><rect x="-34" y="-13" width="68" height="26" rx="13" fill="#E6C364"/><text y="5">19,4%</text></g>
+        <g transform="translate(330 341)"><rect x="-34" y="-13" width="68" height="26" rx="13" fill="#E6C364"/><text y="5">23,2%</text></g>
+        <g transform="translate(302 459)"><rect x="-34" y="-13" width="68" height="26" rx="13" fill="#E6C364" stroke="#00131D" stroke-width="2"/><text y="5">39,4%</text></g>
+      </g>
+      <g font-family="Manrope" font-size="11" font-weight="700" fill="#6B8090">
+        <text x="10" y="590">Taxa geral: 1 compra a cada 801 exibições</text>
+      </g>
+    </svg>
+
+    <div class="funnel-side">
+      <div class="leak">
+        <div class="lbl">Onde mais se perde</div>
+        <div class="num num">77%</div>
+        <p>de quem põe no carrinho não chega ao pagamento. É o melhor lugar para ganhar vendas sem gastar mais com anúncios.</p>
+      </div>
+      <div class="kpi-mini"><div class="lbl">Clique → carrinho</div><div class="num">19,4%</div><span class="badge up"><svg><use href="#up"/></svg>2,1 p.p.</span></div>
+      <div class="kpi-mini"><div class="lbl">Pagamento → compra</div><div class="num">39,4%</div><span class="badge up"><svg><use href="#up"/></svg>3,0 p.p.</span></div>
+      <div class="kpi-mini"><div class="lbl">Carrinho → pagamento</div><div class="num">23,2%</div><span class="badge down"><svg><use href="#down"/></svg>1,8 p.p.</span></div>
+    </div>
+  </div>
+
+  <div class="foot"><span>Campanhas de Vendas · Meta Ads</span><span>3</span></div>
+</section>
+
+<!-- ============ 4 · EVOLUÇÃO + TOP ============ -->
+<section class="page">
+  <div class="run"><span class="brand">GG · OffRio</span><span>Evolução e campanhas</span></div>
+  <h2 class="headline">As vendas <em>aceleraram</em> na segunda quinzena.</h2>
+  <p class="lede">Compras por semana em setembro, comparadas com as mesmas semanas de agosto. Cada bloco vale 5 compras.</p>
+
+  <div class="panel">
+    <h3>Compras por semana <small>ilustrativo no protótipo</small></h3>
+    <svg viewBox="0 0 560 230" width="100%" aria-label="Compras por semana: 31, 39, 52, 63">
+      <g font-family="Manrope" font-size="11" font-weight="700" fill="#6B8090" text-anchor="middle">
+        <text x="85" y="224">1–7 set</text><text x="215" y="224">8–14 set</text><text x="345" y="224">15–21 set</text><text x="475" y="224">22–30 set</text>
+      </g>
+      <line x1="20" x2="540" y1="204" y2="204" stroke="#E7DCCB"/>
+      <!-- blocos: 14px, gap 3. set = azul, ago = areia. colunas de 3 blocos -->
+      <g id="blocks"></g>
+      <g font-family="Ubuntu" font-weight="700" font-size="15" fill="#00131D" text-anchor="middle">
+        <text x="100" y="0" id="l0"></text>
+      </g>
+    </svg>
+    <div class="legend"><span><i style="background:#003F61"></i>Setembro</span><span><i style="background:#E7DCCB"></i>Agosto</span></div>
+  </div>
+
+  <div class="panel">
+    <h3>Campanhas que mais trouxeram resultado <small>setembro</small></h3>
+    <table>
+      <thead><tr><th>Campanha</th><th>Investimento</th><th>Resultado</th><th>Custo por resultado</th><th>Retorno</th></tr></thead>
+      <tbody>
+        <tr><td><span class="rank">1</span>Preview Verão 27<span class="tag">Vendas · 60% do investimento</span><div class="bar"><span style="width:100%"></span></div></td><td>R$ 4.353,88</td><td>117 compras</td><td>R$ 37,21</td><td>9,1×</td></tr>
+        <tr><td><span class="rank">2</span>Coleção Set/Out<span class="tag">Vendas · menor custo do mês</span><div class="bar"><span style="width:47%"></span></div></td><td>R$ 1.410,21</td><td>55 compras</td><td>R$ 25,64</td><td><b style="color:#1F7A24">14,7×</b></td></tr>
+        <tr><td><span class="rank">3</span>Vídeos novos Set.<span class="tag">Vendas · em teste</span><div class="bar"><span style="width:11%"></span></div></td><td>R$ 673,42</td><td>13 compras</td><td>R$ 51,80</td><td>7,6×</td></tr>
+        <tr><td><span class="rank">4</span>Reels · visitas ao perfil<span class="tag">Tráfego</span><div class="bar"><span style="width:100%;background:linear-gradient(90deg,#E6C364,#C9A240)"></span></div></td><td>R$ 748,21</td><td>3.297 visitas</td><td>R$ 0,23</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="foot"><span>Barras: participação no Resultado do seu Objetivo</span><span>4</span></div>
+</section>
+
+<!-- ============ 5 · METAS ============ -->
+<section class="page">
+  <div class="run"><span class="brand">GG · OffRio</span><span>Metas</span></div>
+  <h2 class="headline">As duas Metas do mês foram <em>batidas</em>.</h2>
+  <p class="lede">Combinamos um custo máximo por compra e um retorno mínimo sobre o investido. O ponteiro mostra onde setembro terminou.</p>
+
+  <div class="goals">
+    <div class="goal">
+      <h3>Custo por compra</h3>
+      <svg viewBox="0 0 240 150" width="100%" aria-label="R$ 34,80, Meta até R$ 40">
+        <path d="M30 125A90 90 0 0 1 210 125" fill="none" stroke="#F1E8DA" stroke-width="22" stroke-linecap="round"/>
+        <!-- escala 0–60; meta 40 = 120° -->
+        <path d="M30 125A90 90 0 0 1 142.4 37.8" fill="none" stroke="url(#gFunnel)" stroke-width="22" stroke-linecap="round"/>
+        <line x1="165" y1="47" x2="178" y2="25" stroke="#E6C364" stroke-width="4" stroke-linecap="round"/>
+        <text x="186" y="20" font-family="Manrope" font-size="10" font-weight="700" fill="#8A6A12">Meta R$ 40</text>
+        <!-- valor 34,80 = 104,4° -->
+        <g transform="rotate(104.4 120 125)"><line x1="120" y1="125" x2="52" y2="125" stroke="#00131D" stroke-width="4" stroke-linecap="round"/></g>
+        <circle cx="120" cy="125" r="8" fill="#00131D"/><circle cx="120" cy="125" r="3" fill="#E6C364"/>
+      </svg>
+      <div class="num" style="font-size:28pt;font-weight:700;margin-top:-2mm">R$ 34,80</div>
+      <p class="read">13% abaixo do limite. Sobrou fôlego para testar novos criativos sem estourar a Meta.</p>
+      <span class="status"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M1.5 5.2 4 7.5 8.5 2.5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>Meta atingida</span>
+    </div>
+    <div class="goal">
+      <h3>Retorno sobre o investido</h3>
+      <svg viewBox="0 0 240 150" width="100%" aria-label="10,19 vezes, Meta ao menos 8">
+        <path d="M30 125A90 90 0 0 1 210 125" fill="none" stroke="#F1E8DA" stroke-width="22" stroke-linecap="round"/>
+        <!-- escala 0–14; meta 8 = 102,9°; valor 10,19 = 131° -->
+        <path d="M30 125A90 90 0 0 1 179 57.1" fill="none" stroke="url(#gFunnel)" stroke-width="22" stroke-linecap="round"/>
+        <g transform="rotate(102.9 120 125)"><line x1="12" y1="125" x2="2" y2="125" stroke="#E6C364" stroke-width="4" stroke-linecap="round"/></g>
+        <text x="120" y="16" text-anchor="middle" font-family="Manrope" font-size="10" font-weight="700" fill="#8A6A12">Meta 8×</text>
+        <g transform="rotate(131 120 125)"><line x1="120" y1="125" x2="52" y2="125" stroke="#00131D" stroke-width="4" stroke-linecap="round"/></g>
+        <circle cx="120" cy="125" r="8" fill="#00131D"/><circle cx="120" cy="125" r="3" fill="#E6C364"/>
+      </svg>
+      <div class="num" style="font-size:28pt;font-weight:700;margin-top:-2mm">10,19×</div>
+      <p class="read">27% acima do mínimo. Cada R$ 100 em anúncio de venda trouxe R$ 1.019 em compras.</p>
+      <span class="status"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M1.5 5.2 4 7.5 8.5 2.5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>Meta atingida</span>
+    </div>
+  </div>
+
+  <div class="note" style="margin-top:8mm">
+    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="8" fill="#E6C364"/><path d="M9 5v5M9 12.6v.4" stroke="#00131D" stroke-width="2" stroke-linecap="round"/></svg>
+    <span><b>Como ler.</b> No custo por compra, quanto mais à esquerda, melhor. No retorno, quanto mais à direita, melhor. O traço dourado marca a Meta combinada.</span>
+  </div>
+
+  <div class="foot"><span>Metas do Perfil do Cliente</span><span>5</span></div>
+</section>
+
+<!-- ============ 6 · ENCERRAMENTO ============ -->
+<section class="page dark">
+  <div class="run" style="color:#9DB4C4"><span class="brand" style="color:var(--gold)">GG · OffRio</span><span>Leitura do gestor</span></div>
+  <h2 class="headline">Setembro provou que a <em>coleção nova</em> vende. Agora é hora de destravar o carrinho.</h2>
+
+  <p class="comment">O lançamento do Preview Verão 27 carregou o volume e a coleção Set/Out mostrou o caminho da eficiência. O gargalo está depois do carrinho: três em cada quatro pessoas desistem antes de pagar. Em outubro, vamos atacar esse ponto e redistribuir verba para o que já provou retorno.</p>
+  <p class="sign">Gestor de tráfego · Grupo Galpão</p>
+
+  <div class="steps">
+    <div class="step"><span class="pilar"><i></i>Canais / CRO</span><p><b>Recuperar carrinhos.</b> Público de quem abandonou o carrinho nos últimos 7 dias, com frete e prazo claros no criativo.</p></div>
+    <div class="step"><span class="pilar"><i></i>Criativos</span><p><b>Escalar Set/Out.</b> Levar os vídeos com menor custo para o Preview Verão 27 e pausar os que passam de R$ 50 por compra.</p></div>
+    <div class="step"><span class="pilar"><i></i>Dados</span><p><b>Conferir o pixel.</b> As visitas à página superam os cliques; vale revisar a contagem de eventos no site.</p></div>
+    <div class="step"><span class="pilar"><i></i>Metas S.M.A.R.T.</span><p><b>Nova Meta para outubro.</b> Custo por compra até R$ 32, mantendo o retorno acima de 9×.</p></div>
+  </div>
+
+  <div class="closing">
+    <div class="big">Até o próximo<br><span>Performance+</span>.</div>
+    <div class="gg"><svg class="gg-logo" viewBox="0 0 469 542" role="img" aria-label="Grupo Galpão"><use href="#gglogo"/></svg><div class="gg-name">Grupo Galpão<small>Performance Marketing</small></div></div>
+  </div>
+</section>
+
+<script>
+// blocos da evolução (protótipo): set real total 185, distribuição semanal ilustrativa
+(function(){
+  const set=[31,39,52,63], ago=[34,36,40,52], g=document.getElementById('blocks');
+  const ns='http://www.w3.org/2000/svg', S=11, G=3, base=204, cols=3;
+  const draw=(n,x0,fill)=>{const k=Math.ceil(n/5);for(let i=0;i<k;i++){const c=i%cols,r=Math.floor(i/cols);const e=document.createElementNS(ns,'rect');e.setAttribute('x',x0+c*(S+G));e.setAttribute('y',base-(r+1)*(S+G));e.setAttribute('width',S);e.setAttribute('height',S);e.setAttribute('rx',3);e.setAttribute('fill',fill);g.appendChild(e);}return base-Math.ceil(k/cols)*(S+G);};
+  set.forEach((v,i)=>{const cx=85+i*130;draw(ago[i],cx-46,'#E7DCCB');const top=draw(v,cx+4,i===3?'#003F61':'#45BDFE');const t=document.createElementNS(ns,'text');t.setAttribute('x',cx+24);t.setAttribute('y',top-6);t.setAttribute('text-anchor','middle');t.setAttribute('font-family','Ubuntu');t.setAttribute('font-weight','700');t.setAttribute('font-size','15');t.setAttribute('fill','#00131D');t.textContent=v;g.appendChild(t);});
+})();
+</script>
+</body>
+</html>
